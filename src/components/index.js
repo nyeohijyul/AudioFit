@@ -4,4 +4,5 @@
  */
 export { default as AudioFitWireframe } from './AudioFitWireframe';
 export { default as ScreenLayout } from './ScreenLayout';
+export { default as SplashScreen } from './SplashScreen';
 export { default } from './AudioFitWireframe';
