@@ -2,13 +2,13 @@ git checkout dev
 
 git add .
 git commit -m [messege]
-git push origin dev
+git push origin dev --force
 
-git checkout master
+git checkout main
 git merge --squash dev
-git push origin master
+git push origin main
 git checkout dev
-git reset --hard master
+git reset --hard main
 
 [messege] feat / fix / refactor / docs / chore
 
@@ -17,6 +17,8 @@ fix: resolve player screen overflow
 refactor: split AudioPlayer into hooks
 docs: add Git workflow guide
 chore: configure Vercel deployment
+
+dev -> main (master 너무 지저분해서 버리기)
 
 # Git 사용 정리
 
