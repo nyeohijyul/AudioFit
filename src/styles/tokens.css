@@ -1,0 +1,29 @@
+/**
+ * AudioFit 공통 디자인 토큰 (와이어프레임 palette)
+ * 스플래시·메인 앱 등 전역에서 동일 색상을 사용합니다.
+ */
+:root {
+  --wine: #8b1a2e;
+  --wine-dark: #6a1222;
+  --wine-mid: #c94a62;
+  --wine-light: #f5e6e9;
+  --wine-xlight: #fdf3f5;
+  --bg: #f7f5f2;
+  --surface: #ffffff;
+  --surface2: #f3f0ed;
+  --border: rgba(0, 0, 0, 0.08);
+  --border2: rgba(0, 0, 0, 0.13);
+  --text1: #1a1614;
+  --text2: #6b645e;
+  --text3: #a09790;
+  --green: #2d7a4f;
+  --green-light: #e6f4ec;
+  --splash-text: #ffffff;
+  --splash-text-muted: rgba(255, 255, 255, 0.78);
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
+  --shadow: 0 2px 16px rgba(139, 26, 46, 0.1);
+  --shadow-sm: 0 1px 4px rgba(0, 0, 0, 0.06);
+}

@@ -1,0 +1,153 @@
+/* AudioFit 스플래시 — tokens.css 변수 사용 */
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=DM+Sans:wght@400;500;700&display=swap');
+
+.splash-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1.5rem;
+  padding-top: calc(2rem + env(safe-area-inset-top, 0px));
+  padding-bottom: calc(2rem + env(safe-area-inset-bottom, 0px));
+  background: linear-gradient(
+    165deg,
+    var(--wine-dark) 0%,
+    var(--wine) 42%,
+    var(--wine-mid) 100%
+  );
+  font-family: 'Noto Sans KR', 'DM Sans', sans-serif;
+  overflow: hidden;
+  animation: splash-enter 0.55s ease both;
+}
+
+.splash-screen--exiting {
+  animation: splash-exit 0.45s ease forwards;
+}
+
+.splash-screen__glow {
+  position: absolute;
+  width: 280px;
+  height: 280px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.14) 0%, transparent 70%);
+  top: 18%;
+  left: 50%;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.splash-screen__content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  animation: splash-content-rise 0.65s ease 0.12s both;
+}
+
+.splash-screen--exiting .splash-screen__content {
+  animation: none;
+  opacity: 0;
+  transform: translateY(-8px) scale(0.98);
+  transition: opacity 0.35s ease, transform 0.35s ease;
+}
+
+.splash-screen__logo-wrap {
+  width: 88px;
+  height: 88px;
+  border-radius: var(--radius-xl);
+  background: var(--wine-xlight);
+  box-shadow: var(--shadow), 0 8px 32px rgba(0, 0, 0, 0.18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1.25rem;
+}
+
+.splash-screen__logo {
+  font-size: 2.5rem;
+  line-height: 1;
+}
+
+.splash-screen__title {
+  font-size: 1.65rem;
+  font-weight: 700;
+  color: var(--splash-text);
+  letter-spacing: -0.03em;
+  margin-bottom: 0.35rem;
+}
+
+.splash-screen__tagline {
+  font-size: 0.88rem;
+  color: var(--splash-text-muted);
+  font-weight: 500;
+  margin-bottom: 2rem;
+}
+
+.splash-screen__loader {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  justify-content: center;
+}
+
+.splash-screen__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--wine-light);
+  animation: splash-dot-pulse 1s ease-in-out infinite;
+}
+
+.splash-screen__dot:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.splash-screen__dot:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes splash-enter {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes splash-exit {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes splash-content-rise {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes splash-dot-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(0.85);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}

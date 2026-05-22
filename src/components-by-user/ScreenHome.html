@@ -1,0 +1,74 @@
+    <div class="screen active" id="screen-home">
+      <div class="header">
+        <h2>AudioFit</h2>
+        <p>좋은 아침이에요 👋 오늘도 같이 운동해요</p>
+      </div>
+
+      <div class="section">
+        <div class="section-title">오늘의 추천 루틴</div>
+        <div class="card featured" onclick="showScreen('player', document.querySelector('.screen-nav button:nth-child(3)'))">
+          <div class="card-header">
+            <div>
+              <div class="card-title">🔥 아침 5분 코어 깨우기</div>
+              <div class="card-sub">5개 동작 · 15분 · 초보자용</div>
+            </div>
+            <span class="tag">추천</span>
+          </div>
+          <div class="tags">
+            <span class="tag">코어 강화</span>
+            <span class="tag">유산소</span>
+            <span class="tag-green tag">광고 없음</span>
+          </div>
+        </div>
+        <button class="btn-wine" onclick="showScreen('player', document.querySelector('.screen-nav button:nth-child(3)'))">▶ 지금 바로 시작</button>
+      </div>
+
+      <div class="section">
+        <div class="section-title">최근 재생한 루틴</div>
+        <div class="card" onclick="showScreen('player', document.querySelector('.screen-nav button:nth-child(3)'))">
+          <div class="card-header">
+            <div>
+              <div class="card-title">💪 전신 홈트 30분</div>
+              <div class="card-sub">어제 재생 · 8개 동작 · 30분</div>
+            </div>
+            <span style="font-size:0.72rem; color:var(--text3); margin-top:2px;">›</span>
+          </div>
+        </div>
+        <div class="card" onclick="showScreen('player', document.querySelector('.screen-nav button:nth-child(3)'))">
+          <div class="card-header">
+            <div>
+              <div class="card-title">🦵 하체 집중 스쿼트</div>
+              <div class="card-sub">3일 전 재생 · 6개 동작 · 20분</div>
+            </div>
+            <span style="font-size:0.72rem; color:var(--text3); margin-top:2px;">›</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">공유된 인기 루틴</div>
+        <div class="card">
+          <div class="card-title">🧘 자기 전 10분 스트레칭</div>
+          <div class="card-sub">❤️ 1,243명 저장 · 초보자 · 10분</div>
+          <div class="tags"><span class="tag">유연성</span><span class="tag">수면 개선</span></div>
+        </div>
+      </div>
+
+      <div class="tab-bar">
+        <div class="tab-item active" onclick="showScreen('home',document.querySelector('.screen-nav button:nth-child(1)'))">
+          <span class="tab-icon">🏠</span>홈
+        </div>
+        <div class="tab-item" onclick="showScreen('new',document.querySelector('.screen-nav button:nth-child(2)'))">
+          <span class="tab-icon">✚</span>새루틴
+        </div>
+        <div class="tab-item" onclick="showScreen('player',document.querySelector('.screen-nav button:nth-child(3)'))">
+          <span class="tab-icon">▶</span>재생
+        </div>
+        <div class="tab-item" onclick="showScreen('library',document.querySelector('.screen-nav button:nth-child(4)'))">
+          <span class="tab-icon">📁</span>보관함
+        </div>
+        <div class="tab-item" onclick="showScreen('mypage',document.querySelector('.screen-nav button:nth-child(5)'))">
+          <span class="tab-icon">👤</span>내정보
+        </div>
+      </div>
+    </div>

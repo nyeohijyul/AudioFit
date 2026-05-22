@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AudioFit — 나만의 홈트 라디오</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="styles.css"/>
+</head>
+<body>
+
+<div class="page-title">
+  <h1>🎙 AudioFit</h1>
+  <p>나만의 홈트 라디오 — 모바일 UI 와이어프레임</p>
+</div>
+
+<!-- ───────── SCREEN NAV ───────── -->
+<div class="screen-nav">
+  <button class="active" onclick="showScreen('home',this)">🏠 홈</button>
+  <button onclick="showScreen('new',this)">✚ 새 루틴</button>
+  <button onclick="showScreen('player',this)">▶ 플레이어</button>
+  <button onclick="showScreen('library',this)">📁 보관함</button>
+  <button onclick="showScreen('mypage',this)">👤 마이페이지</button>
+</div>
+
+<!-- ───────── PHONE ───────── -->
+<div class="phone-wrap">
+  <div class="phone-shell">
+    <div class="notch"></div>
+
+    <!-- STATUS BAR -->
+    <div class="status-bar">
+      <span class="time">9:41</span>
+      <div class="icons">
+        <span>●●●</span>
+        <span>WiFi</span>
+        <span>🔋</span>
+      </div>
+    </div>
+
+    <!-- ══════ SCREEN 1: HOME ══════ -->
+    <div class="screen active" id="screen-home">
+      <div class="header">
+        <h2>AudioFit</h2>
+        <p>좋은 아침이에요 👋 오늘도 같이 운동해요</p>
+      </div>
+
+      <div class="section">
+        <div class="section-title">오늘의 추천 루틴</div>
+        <div class="card featured" onclick="showScreen('player', document.querySelector('.screen-nav button:nth-child(3)'))">
+          <div class="card-header">
+            <div>
+              <div class="card-title">🔥 아침 5분 코어 깨우기</div>
+              <div class="card-sub">5개 동작 · 15분 · 초보자용</div>
+            </div>
+            <span class="tag">추천</span>
+          </div>
+          <div class="tags">
+            <span class="tag">코어 강화</span>
+            <span class="tag">유산소</span>
+            <span class="tag-green tag">광고 없음</span>
+          </div>
+        </div>
+        <button class="btn-wine" onclick="showScreen('player', document.querySelector('.screen-nav button:nth-child(3)'))">▶ 지금 바로 시작</button>
+      </div>
+
+      <div class="section">
+        <div class="section-title">최근 재생한 루틴</div>
+        <div class="card" onclick="showScreen('player', document.querySelector('.screen-nav button:nth-child(3)'))">
+          <div class="card-header">
+            <div>
+              <div class="card-title">💪 전신 홈트 30분</div>
+              <div class="card-sub">어제 재생 · 8개 동작 · 30분</div>
+            </div>
+            <span style="font-size:0.72rem; color:var(--text3); margin-top:2px;">›</span>
+          </div>
+        </div>
+        <div class="card" onclick="showScreen('player', document.querySelector('.screen-nav button:nth-child(3)'))">
+          <div class="card-header">
+            <div>
+              <div class="card-title">🦵 하체 집중 스쿼트</div>
+              <div class="card-sub">3일 전 재생 · 6개 동작 · 20분</div>
+            </div>
+            <span style="font-size:0.72rem; color:var(--text3); margin-top:2px;">›</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">공유된 인기 루틴</div>
+        <div class="card">
+          <div class="card-title">🧘 자기 전 10분 스트레칭</div>
+          <div class="card-sub">❤️ 1,243명 저장 · 초보자 · 10분</div>
+          <div class="tags"><span class="tag">유연성</span><span class="tag">수면 개선</span></div>
+        </div>
+      </div>
+
+      <div class="tab-bar">
+        <div class="tab-item active" onclick="showScreen('home',document.querySelector('.screen-nav button:nth-child(1)'))">
+          <span class="tab-icon">🏠</span>홈
+        </div>
+        <div class="tab-item" onclick="showScreen('new',document.querySelector('.screen-nav button:nth-child(2)'))">
+          <span class="tab-icon">✚</span>새루틴
+        </div>
+        <div class="tab-item" onclick="showScreen('player',document.querySelector('.screen-nav button:nth-child(3)'))">
+          <span class="tab-icon">▶</span>재생
+        </div>
+        <div class="tab-item" onclick="showScreen('library',document.querySelector('.screen-nav button:nth-child(4)'))">
+          <span class="tab-icon">📁</span>보관함
+        </div>
+        <div class="tab-item" onclick="showScreen('mypage',document.querySelector('.screen-nav button:nth-child(5)'))">
+          <span class="tab-icon">👤</span>내정보
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════ SCREEN 2: NEW ROUTINE ══════ -->
+    <div class="screen" id="screen-new">
+      <div class="header">
+        <h2>새 루틴 만들기</h2>
+        <p>유튜브 링크를 붙여 넣으면 AI가 자동 분석해요</p>
+      </div>
+
+      <div class="section">
+        <div class="section-title-numbered">
+          <div class="step-num">1</div>유튜브 링크 입력
+        </div>
+        <input class="input-field" type="text" id="yt-link" placeholder="youtube.com/watch?v=..." />
+
+        <div id="clip-list">
+          <div class="clip-item">
+            <div class="clip-dot"></div>
+            전신 홈트 (닥터유)
+            <span class="clip-meta">14:32~28:00</span>
+          </div>
+        </div>
+
+        <button class="btn-outline" onclick="addClip()">+ 영상 추가하기</button>
+      </div>
+
+      <div class="section">
+        <div class="section-title-numbered">
+          <div class="step-num">2</div>구간 선택
+        </div>
+        <div class="time-inputs">
+          <div class="time-box">⏱ 시작 &nbsp;<strong id="start-val">00:00</strong></div>
+          <div class="time-box">🏁 종료 &nbsp;<strong id="end-val">18:00</strong></div>
+        </div>
+        <input class="real-range" type="range" min="0" max="60" value="36" id="seg-slider" oninput="updateSlider(this.value)"/>
+        <div class="range-labels">
+          <span>0:00</span><span>영상 전체 길이 60분</span>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title-numbered">
+          <div class="step-num">3</div>번역 모드
+        </div>
+        <div class="toggle-row">
+          <div>
+            <div class="toggle-label">초보자 언어로 바꾸기</div>
+          </div>
+          <div class="toggle" id="toggle-translate" onclick="toggleSwitch('toggle-translate')"></div>
+        </div>
+        <div class="translate-example">
+          <strong>버피 →</strong> "서서 뛰다가 바닥에 손 짚고 엎드렸다 일어나기"<br/>
+          <strong>플랭크 →</strong> "팔꿈치를 바닥에 대고 몸을 일자로 버티기"
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title-numbered">
+          <div class="step-num">4</div>루틴 이름 짓기
+        </div>
+        <input class="input-field" type="text" placeholder="예: 아침 10분 코어 루틴" />
+        <button class="btn-wine">✔ 루틴 저장하고 보관함에 추가</button>
+      </div>
+
+      <div class="tab-bar">
+        <div class="tab-item" onclick="showScreen('home',document.querySelector('.screen-nav button:nth-child(1)'))"><span class="tab-icon">🏠</span>홈</div>
+        <div class="tab-item active" onclick="showScreen('new',document.querySelector('.screen-nav button:nth-child(2)'))"><span class="tab-icon">✚</span>새루틴</div>
+        <div class="tab-item" onclick="showScreen('player',document.querySelector('.screen-nav button:nth-child(3)'))"><span class="tab-icon">▶</span>재생</div>
+        <div class="tab-item" onclick="showScreen('library',document.querySelector('.screen-nav button:nth-child(4)'))"><span class="tab-icon">📁</span>보관함</div>
+        <div class="tab-item" onclick="showScreen('mypage',document.querySelector('.screen-nav button:nth-child(5)'))"><span class="tab-icon">👤</span>내정보</div>
+      </div>
+    </div>
+
+    <!-- ══════ SCREEN 3: PLAYER ══════ -->
+    <div class="screen" id="screen-player">
+      <div class="header">
+        <div class="header-row">
+          <div>
+            <h2>아침 5분 코어 깨우기</h2>
+            <p id="player-step-label">3 / 5번째 동작</p>
+          </div>
+          <span class="header-icon">🔊</span>
+        </div>
+      </div>
+
+      <div class="progress-bar-wrap" style="padding-top:12px;">
+        <div class="progress-bar">
+          <div class="progress-fill" id="player-progress"></div>
+        </div>
+        <div class="progress-labels">
+          <span id="player-elapsed">6:12</span>
+          <span>15:00</span>
+        </div>
+      </div>
+
+      <div class="player-donut">
+        <svg class="donut-svg" width="148" height="148" viewBox="0 0 148 148">
+          <circle cx="74" cy="74" r="58" fill="none" stroke="var(--surface2)" stroke-width="12"/>
+          <circle id="donut-ring" cx="74" cy="74" r="58" fill="none"
+            stroke="var(--wine)" stroke-width="12"
+            stroke-dasharray="364"
+            stroke-dashoffset="0"
+            stroke-linecap="round"
+            transform="rotate(-90 74 74)"
+            style="transition: stroke-dashoffset 1s linear;"/>
+        </svg>
+        <div class="donut-center">
+          <div class="donut-time" id="timer-display">24</div>
+          <div class="donut-label">초 남음</div>
+        </div>
+      </div>
+
+      <div class="action-big" id="action-name">무릎 대고 팔굽혀 펴기</div>
+      <div class="action-desc" id="action-desc">
+        손은 어깨너비로 짚고, 무릎을 바닥에 댄 채 가슴이 바닥에 닿을 때까지 천천히 내려가요
+      </div>
+
+      <div class="next-hint">
+        다음 동작 → <strong id="next-action">엉덩이 들어올리기 (힙 브리지)</strong>
+      </div>
+
+      <div class="controls">
+        <div class="ctrl" onclick="prevExercise()" title="이전">⏮</div>
+        <div class="ctrl" onclick="seekBack()" title="-10초">⏪</div>
+        <div class="ctrl main" id="play-btn" onclick="togglePlay()">⏸</div>
+        <div class="ctrl" onclick="seekForward()" title="+10초">⏩</div>
+        <div class="ctrl" onclick="nextExercise()" title="다음">⏭</div>
+      </div>
+
+      <div class="speed-chips">
+        <div class="speed-chip" onclick="setSpeed(this,'0.75×')">0.75×</div>
+        <div class="speed-chip active" onclick="setSpeed(this,'1×')">1×</div>
+        <div class="speed-chip" onclick="setSpeed(this,'1.25×')">1.25×</div>
+        <div class="speed-chip" onclick="setSpeed(this,'1.5×')">1.5×</div>
+      </div>
+
+      <div class="tab-bar">
+        <div class="tab-item" onclick="showScreen('home',document.querySelector('.screen-nav button:nth-child(1)'))"><span class="tab-icon">🏠</span>홈</div>
+        <div class="tab-item" onclick="showScreen('new',document.querySelector('.screen-nav button:nth-child(2)'))"><span class="tab-icon">✚</span>새루틴</div>
+        <div class="tab-item active" onclick="showScreen('player',document.querySelector('.screen-nav button:nth-child(3)'))"><span class="tab-icon">▶</span>재생</div>
+        <div class="tab-item" onclick="showScreen('library',document.querySelector('.screen-nav button:nth-child(4)'))"><span class="tab-icon">📁</span>보관함</div>
+        <div class="tab-item" onclick="showScreen('mypage',document.querySelector('.screen-nav button:nth-child(5)'))"><span class="tab-icon">👤</span>내정보</div>
+      </div>
+    </div>
+
+    <!-- ══════ SCREEN 4: LIBRARY ══════ -->
+    <div class="screen" id="screen-library">
+      <div class="header">
+        <h2>내 루틴 보관함</h2>
+        <p>저장된 루틴 4개</p>
+      </div>
+
+      <div class="section" style="padding-bottom:8px;">
+        <input class="input-field" type="text" placeholder="🔍 루틴 이름 검색..." style="margin-bottom:0;"/>
+      </div>
+
+      <div class="section" style="padding-top:8px;">
+        <div id="library-list">
+          <div class="routine-item">
+            <div class="routine-thumb">🔥</div>
+            <div class="routine-info">
+              <div class="routine-name">아침 5분 코어 깨우기</div>
+              <div class="routine-meta">5개 동작 · 15분 · 초보자</div>
+            </div>
+            <div class="routine-actions">
+              <div class="icon-btn" title="편집">✏️</div>
+              <div class="icon-btn" title="공유">↗</div>
+              <div class="icon-btn" title="삭제" onclick="deleteRoutine(this)">🗑</div>
+            </div>
+          </div>
+          <div class="routine-item">
+            <div class="routine-thumb">💪</div>
+            <div class="routine-info">
+              <div class="routine-name">전신 홈트 30분</div>
+              <div class="routine-meta">8개 동작 · 30분 · 중급자</div>
+            </div>
+            <div class="routine-actions">
+              <div class="icon-btn">✏️</div>
+              <div class="icon-btn">↗</div>
+              <div class="icon-btn" onclick="deleteRoutine(this)">🗑</div>
+            </div>
+          </div>
+          <div class="routine-item">
+            <div class="routine-thumb">🦵</div>
+            <div class="routine-info">
+              <div class="routine-name">하체 집중 스쿼트</div>
+              <div class="routine-meta">6개 동작 · 20분 · 초보자</div>
+            </div>
+            <div class="routine-actions">
+              <div class="icon-btn">✏️</div>
+              <div class="icon-btn">↗</div>
+              <div class="icon-btn" onclick="deleteRoutine(this)">🗑</div>
+            </div>
+          </div>
+          <div class="routine-item">
+            <div class="routine-thumb">🧘</div>
+            <div class="routine-info">
+              <div class="routine-name">자기 전 스트레칭</div>
+              <div class="routine-meta">4개 동작 · 10분 · 초보자</div>
+            </div>
+            <div class="routine-actions">
+              <div class="icon-btn">✏️</div>
+              <div class="icon-btn">↗</div>
+              <div class="icon-btn" onclick="deleteRoutine(this)">🗑</div>
+            </div>
+          </div>
+        </div>
+        <button class="btn-outline" onclick="showScreen('new',document.querySelector('.screen-nav button:nth-child(2)'))">+ 새 루틴 만들기</button>
+      </div>
+
+      <div class="tab-bar">
+        <div class="tab-item" onclick="showScreen('home',document.querySelector('.screen-nav button:nth-child(1)'))"><span class="tab-icon">🏠</span>홈</div>
+        <div class="tab-item" onclick="showScreen('new',document.querySelector('.screen-nav button:nth-child(2)'))"><span class="tab-icon">✚</span>새루틴</div>
+        <div class="tab-item" onclick="showScreen('player',document.querySelector('.screen-nav button:nth-child(3)'))"><span class="tab-icon">▶</span>재생</div>
+        <div class="tab-item active" onclick="showScreen('library',document.querySelector('.screen-nav button:nth-child(4)'))"><span class="tab-icon">📁</span>보관함</div>
+        <div class="tab-item" onclick="showScreen('mypage',document.querySelector('.screen-nav button:nth-child(5)'))"><span class="tab-icon">👤</span>내정보</div>
+      </div>
+    </div>
+
+    <!-- ══════ SCREEN 5: MYPAGE ══════ -->
+    <div class="screen" id="screen-mypage">
+      <div class="header">
+        <h2>마이페이지</h2>
+        <p>이번 달 12회 운동했어요 🎉</p>
+      </div>
+
+      <div class="section">
+        <div class="stats-row">
+          <div class="stat-card">
+            <div class="stat-num">12</div>
+            <div class="stat-label">이번 달 운동</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-num">4</div>
+            <div class="stat-label">저장된 루틴</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-num">3h</div>
+            <div class="stat-label">총 운동 시간</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">5월 운동 기록</div>
+        <div class="cal-grid">
+          <div class="cal-day hdr">월</div><div class="cal-day hdr">화</div>
+          <div class="cal-day hdr">수</div><div class="cal-day hdr">목</div>
+          <div class="cal-day hdr">금</div><div class="cal-day hdr">토</div>
+          <div class="cal-day hdr">일</div>
+          <div class="cal-day"></div>
+          <div class="cal-day done">6</div><div class="cal-day">7</div>
+          <div class="cal-day done">8</div><div class="cal-day">9</div>
+          <div class="cal-day done">10</div><div class="cal-day">11</div>
+          <div class="cal-day done">13</div><div class="cal-day">14</div>
+          <div class="cal-day done">15</div><div class="cal-day">16</div>
+          <div class="cal-day done">17</div><div class="cal-day">18</div>
+          <div class="cal-day today">19</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">나의 체력 수준</div>
+        <div class="level-row">
+          <button class="level-btn active" onclick="setLevel(this)">🌱 완전 초보</button>
+          <button class="level-btn" onclick="setLevel(this)">🔥 중급자</button>
+          <button class="level-btn" onclick="setLevel(this)">💪 고급자</button>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">설정</div>
+        <div class="toggle-row">
+          <div>
+            <div class="toggle-label">용어 쉬운 말로 바꾸기</div>
+          </div>
+          <div class="toggle" id="t1" onclick="toggleSwitch('t1')"></div>
+        </div>
+        <div class="toggle-row">
+          <div>
+            <div class="toggle-label">운동 시작 알림 받기</div>
+          </div>
+          <div class="toggle off" id="t2" onclick="toggleSwitch('t2')"></div>
+        </div>
+        <div class="toggle-row">
+          <div>
+            <div class="toggle-label">음성 코칭 속도</div>
+          </div>
+          <div style="font-size:0.78rem; color:var(--wine); font-weight:700; cursor:pointer;">1× 보통 ›</div>
+        </div>
+        <div class="toggle-row">
+          <div>
+            <div class="toggle-label">다크 모드</div>
+          </div>
+          <div class="toggle off" id="t3" onclick="toggleSwitch('t3')"></div>
+        </div>
+      </div>
+
+      <div class="tab-bar">
+        <div class="tab-item" onclick="showScreen('home',document.querySelector('.screen-nav button:nth-child(1)'))"><span class="tab-icon">🏠</span>홈</div>
+        <div class="tab-item" onclick="showScreen('new',document.querySelector('.screen-nav button:nth-child(2)'))"><span class="tab-icon">✚</span>새루틴</div>
+        <div class="tab-item" onclick="showScreen('player',document.querySelector('.screen-nav button:nth-child(3)'))"><span class="tab-icon">▶</span>재생</div>
+        <div class="tab-item" onclick="showScreen('library',document.querySelector('.screen-nav button:nth-child(4)'))"><span class="tab-icon">📁</span>보관함</div>
+        <div class="tab-item active" onclick="showScreen('mypage',document.querySelector('.screen-nav button:nth-child(5)'))"><span class="tab-icon">👤</span>내정보</div>
+      </div>
+    </div>
+
+  </div><!-- /phone-shell -->
+</div><!-- /phone-wrap -->
+<script src="script.js"></script>
+</body>
+</html>
