@@ -1,7 +1,8 @@
 {
-  "name": "python-project",
+  "name": "audiofit",
   "private": true,
   "version": "0.0.0",
+  "description": "AudioFit — 나만의 홈트 라디오",
   "type": "module",
   "scripts": {
     "dev": "vite",
