@@ -1,7 +1,16 @@
-1. git merge --squash dev
-2. git reset --hard master
-3. git push origin [branch]
-4. feat / fix / refactor / docs / chore
+git checkout dev
+
+git add .
+git commit -m [messege]
+git push origin dev
+
+git checkout master
+git merge --squash dev
+git push origin master
+git checkout dev
+git reset --hard master
+
+[messege] feat / fix / refactor / docs / chore
 
 feat: implement bottom tab navigation
 fix: resolve player screen overflow
@@ -706,3 +715,6 @@ fix typo real
 * 리팩토링 단위
 
 로 commit 하면 나중에 엄청 편해집니다.
+
+
+> 자꾸 unrelated history 갖는다고 떠서 챗gpt한테 물어보니 이거 하라고 해서 this merge 가 필요합니다.
