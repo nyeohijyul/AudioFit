@@ -1,3 +1,13 @@
+1. git merge --squash dev
+2. git reset --hard master
+3. feat / fix / refactor / docs / chore
+
+feat: implement bottom tab navigation
+fix: resolve player screen overflow
+refactor: split AudioPlayer into hooks
+docs: add Git workflow guide
+chore: configure Vercel deployment
+
 # Git 사용 정리
 
 ## 1. branch 나누고 master(main)에 커밋 1개만 남기며 합치는 방법
