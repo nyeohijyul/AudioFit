@@ -1,6 +1,7 @@
 1. git merge --squash dev
 2. git reset --hard master
-3. feat / fix / refactor / docs / chore
+3. git push origin [branch]
+4. feat / fix / refactor / docs / chore
 
 feat: implement bottom tab navigation
 fix: resolve player screen overflow
