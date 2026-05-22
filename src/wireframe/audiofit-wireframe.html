@@ -1,0 +1,1340 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AudioFit — 나만의 홈트 라디오</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet"/>
+<style>
+/* ───────── TOKENS ───────── */
+:root {
+  --wine: #8B1A2E;
+  --wine-dark: #6a1222;
+  --wine-mid: #c94a62;
+  --wine-light: #f5e6e9;
+  --wine-xlight: #fdf3f5;
+  --bg: #f7f5f2;
+  --surface: #ffffff;
+  --surface2: #f3f0ed;
+  --border: rgba(0,0,0,0.08);
+  --border2: rgba(0,0,0,0.13);
+  --text1: #1a1614;
+  --text2: #6b645e;
+  --text3: #a09790;
+  --green: #2d7a4f;
+  --green-light: #e6f4ec;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
+  --shadow: 0 2px 16px rgba(139,26,46,0.10);
+  --shadow-sm: 0 1px 4px rgba(0,0,0,0.06);
+}
+
+/* ───────── RESET ───────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 16px; }
+body {
+  font-family: 'Noto Sans KR', 'DM Sans', sans-serif;
+  background: var(--bg);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 2rem 1rem 4rem;
+}
+
+/* ───────── PAGE TITLE ───────── */
+.page-title {
+  text-align: center;
+  margin-bottom: 2.5rem;
+}
+.page-title h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--wine);
+  letter-spacing: -0.02em;
+}
+.page-title p {
+  font-size: 0.82rem;
+  color: var(--text2);
+  margin-top: 4px;
+}
+
+/* ───────── SCREEN NAV ───────── */
+.screen-nav {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-bottom: 2rem;
+}
+.screen-nav button {
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 500;
+  padding: 7px 16px;
+  border-radius: 999px;
+  border: 1.5px solid var(--border2);
+  background: var(--surface);
+  color: var(--text2);
+  cursor: pointer;
+  transition: all .18s;
+}
+.screen-nav button.active,
+.screen-nav button:hover {
+  background: var(--wine);
+  color: #fff;
+  border-color: var(--wine);
+}
+
+/* ───────── PHONE SHELL ───────── */
+.phone-wrap {
+  position: relative;
+  width: 375px;
+  animation: fadeUp .35s ease both;
+}
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.phone-shell {
+  width: 375px;
+  background: var(--surface);
+  border-radius: 44px;
+  border: 2px solid rgba(0,0,0,0.12);
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.14), 0 4px 12px rgba(0,0,0,0.08);
+  position: relative;
+}
+/* status bar */
+.status-bar {
+  height: 44px;
+  background: var(--wine);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 28px 0 24px;
+}
+.status-bar .time {
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  font-family: 'DM Sans', sans-serif;
+}
+.status-bar .icons {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.status-bar .icons span {
+  font-size: 12px;
+  color: rgba(255,255,255,0.85);
+}
+/* notch */
+.notch {
+  position: absolute;
+  top: 0; left: 50%;
+  transform: translateX(-50%);
+  width: 120px; height: 30px;
+  background: #111;
+  border-radius: 0 0 18px 18px;
+  z-index: 10;
+}
+
+/* ───────── SCREEN ───────── */
+.screen {
+  display: none;
+  flex-direction: column;
+  min-height: 740px;
+  max-height: 760px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.screen.active { display: flex; }
+.screen::-webkit-scrollbar { display: none; }
+
+/* ───────── HEADER ───────── */
+.header {
+  background: var(--wine);
+  padding: 18px 22px 20px;
+  flex-shrink: 0;
+}
+.header h2 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 3px;
+  letter-spacing: -0.01em;
+}
+.header p {
+  font-size: 0.78rem;
+  color: rgba(255,255,255,0.72);
+}
+.header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+.header-icon {
+  font-size: 22px;
+  opacity: 0.85;
+}
+
+/* ───────── SECTIONS ───────── */
+.section {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.section:last-of-type { border-bottom: none; }
+.section-title {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin-bottom: 10px;
+}
+.section-title-numbered {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--wine);
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.step-num {
+  width: 18px; height: 18px;
+  background: var(--wine);
+  color: #fff;
+  border-radius: 50%;
+  font-size: 0.65rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ───────── CARDS ───────── */
+.card {
+  background: var(--surface2);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  margin-bottom: 8px;
+  transition: transform .15s, box-shadow .15s;
+  cursor: pointer;
+}
+.card:last-child { margin-bottom: 0; }
+.card:hover { transform: translateY(-1px); box-shadow: var(--shadow-sm); }
+.card.featured {
+  border-left: 3.5px solid var(--wine);
+  background: var(--wine-xlight);
+  padding-left: 11px;
+}
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 4px;
+}
+.card-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text1);
+}
+.card-sub {
+  font-size: 0.74rem;
+  color: var(--text2);
+  line-height: 1.5;
+}
+.tags {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+.tag {
+  font-size: 0.66rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--wine-light);
+  color: var(--wine);
+}
+.tag-green {
+  background: var(--green-light);
+  color: var(--green);
+}
+
+/* ───────── BUTTONS ───────── */
+.btn-wine {
+  display: block;
+  width: 100%;
+  background: var(--wine);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 13px 0;
+  font-size: 0.88rem;
+  font-weight: 700;
+  font-family: inherit;
+  text-align: center;
+  cursor: pointer;
+  transition: background .15s, transform .12s;
+  letter-spacing: -0.01em;
+}
+.btn-wine:hover { background: var(--wine-dark); transform: translateY(-1px); }
+.btn-wine:active { transform: scale(0.98); }
+.btn-outline {
+  display: block;
+  width: 100%;
+  background: transparent;
+  color: var(--wine);
+  border: 1.5px solid var(--wine);
+  border-radius: var(--radius-sm);
+  padding: 10px 0;
+  font-size: 0.82rem;
+  font-weight: 700;
+  font-family: inherit;
+  text-align: center;
+  cursor: pointer;
+  margin-top: 8px;
+  transition: all .15s;
+}
+.btn-outline:hover { background: var(--wine-light); }
+
+/* ───────── TAB BAR ───────── */
+.tab-bar {
+  display: flex;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+  padding: 8px 0 16px;
+  flex-shrink: 0;
+  margin-top: auto;
+}
+.tab-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  font-size: 0.62rem;
+  color: var(--text3);
+  cursor: pointer;
+  transition: color .15s;
+  padding: 4px 0;
+}
+.tab-item .tab-icon { font-size: 1.1rem; transition: transform .15s; }
+.tab-item:hover .tab-icon { transform: translateY(-2px); }
+.tab-item.active { color: var(--wine); font-weight: 700; }
+.tab-item.active .tab-icon { transform: scale(1.1); }
+
+/* ───────── INPUT ───────── */
+.input-field {
+  width: 100%;
+  border: 1.5px solid var(--border2);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  font-size: 0.82rem;
+  font-family: inherit;
+  color: var(--text2);
+  background: var(--surface2);
+  margin-bottom: 8px;
+  outline: none;
+  transition: border-color .15s;
+}
+.input-field:focus { border-color: var(--wine); }
+
+/* ───────── SLIDER (range) ───────── */
+.range-wrap {
+  position: relative;
+  margin: 6px 0;
+}
+.range-track {
+  height: 6px;
+  background: var(--surface2);
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  position: relative;
+  overflow: hidden;
+}
+.range-fill {
+  position: absolute;
+  left: 0; top: 0;
+  height: 100%;
+  background: var(--wine);
+  width: 65%;
+  border-radius: 999px;
+}
+.range-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.7rem;
+  color: var(--text2);
+  margin-top: 4px;
+}
+.time-inputs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.time-box {
+  flex: 1;
+  background: var(--surface2);
+  border: 1.5px solid var(--border2);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  font-size: 0.8rem;
+  color: var(--text1);
+  font-weight: 500;
+  text-align: center;
+}
+.real-range {
+  width: 100%;
+  appearance: none;
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(to right, var(--wine) 0%, var(--wine) 60%, var(--surface2) 60%);
+  outline: none;
+  cursor: pointer;
+  margin: 10px 0 4px;
+}
+.real-range::-webkit-slider-thumb {
+  appearance: none;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: var(--wine);
+  border: 2.5px solid #fff;
+  box-shadow: 0 1px 4px rgba(139,26,46,0.3);
+  cursor: pointer;
+}
+
+/* ───────── TOGGLE ───────── */
+.toggle-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--border);
+}
+.toggle-row:last-child { border-bottom: none; }
+.toggle-label {
+  font-size: 0.82rem;
+  color: var(--text1);
+}
+.toggle-desc {
+  font-size: 0.72rem;
+  color: var(--text2);
+  margin-top: 2px;
+}
+.toggle {
+  width: 38px; height: 22px;
+  background: var(--wine);
+  border-radius: 999px;
+  position: relative;
+  cursor: pointer;
+  transition: background .2s;
+  flex-shrink: 0;
+}
+.toggle::after {
+  content: '';
+  position: absolute;
+  right: 3px; top: 3px;
+  width: 16px; height: 16px;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform .2s, right .2s;
+}
+.toggle.off { background: var(--border2); }
+.toggle.off::after { right: auto; left: 3px; }
+
+/* ───────── PLAYER ───────── */
+.player-donut {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 18px 0 8px;
+  position: relative;
+}
+.donut-svg { overflow: visible; }
+.donut-center {
+  position: absolute;
+  text-align: center;
+  pointer-events: none;
+}
+.donut-time {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--wine);
+  line-height: 1;
+  font-family: 'DM Sans', sans-serif;
+}
+.donut-label {
+  font-size: 0.7rem;
+  color: var(--text2);
+  margin-top: 2px;
+}
+.action-big {
+  text-align: center;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text1);
+  padding: 6px 20px 4px;
+  letter-spacing: -0.02em;
+}
+.action-desc {
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--text2);
+  padding: 0 24px 10px;
+  line-height: 1.6;
+}
+.next-hint {
+  text-align: center;
+  font-size: 0.74rem;
+  color: var(--text2);
+  padding: 0 0 12px;
+}
+.next-hint strong { color: var(--wine); font-weight: 700; }
+.controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  padding: 0 0 12px;
+}
+.ctrl {
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border2);
+  background: var(--surface2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all .15s;
+  color: var(--text1);
+}
+.ctrl:hover { border-color: var(--wine); color: var(--wine); }
+.ctrl.main {
+  width: 56px; height: 56px;
+  background: var(--wine);
+  border-color: var(--wine);
+  font-size: 1.3rem;
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(139,26,46,0.3);
+}
+.ctrl.main:hover { background: var(--wine-dark); transform: scale(1.05); }
+.speed-chips {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  padding-bottom: 12px;
+}
+.speed-chip {
+  font-size: 0.72rem;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1.5px solid var(--border2);
+  color: var(--text2);
+  cursor: pointer;
+  transition: all .15s;
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 500;
+}
+.speed-chip.active {
+  background: var(--wine-light);
+  color: var(--wine);
+  border-color: var(--wine);
+  font-weight: 700;
+}
+.progress-bar-wrap {
+  padding: 0 20px 4px;
+}
+.progress-bar {
+  height: 3px;
+  background: var(--surface2);
+  border-radius: 999px;
+  position: relative;
+}
+.progress-fill {
+  height: 100%;
+  width: 42%;
+  background: var(--wine);
+  border-radius: 999px;
+}
+.progress-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.67rem;
+  color: var(--text3);
+  margin-top: 3px;
+  font-family: 'DM Sans', sans-serif;
+}
+
+/* ───────── LIBRARY ───────── */
+.routine-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background .12s;
+}
+.routine-item:last-child { border-bottom: none; }
+.routine-thumb {
+  width: 42px; height: 42px;
+  border-radius: var(--radius-sm);
+  background: var(--wine-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+.routine-info { flex: 1; min-width: 0; }
+.routine-name {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.routine-meta {
+  font-size: 0.7rem;
+  color: var(--text2);
+  margin-top: 2px;
+}
+.routine-actions {
+  display: flex;
+  gap: 5px;
+  flex-shrink: 0;
+}
+.icon-btn {
+  width: 30px; height: 30px;
+  border-radius: 8px;
+  border: 1px solid var(--border2);
+  background: var(--surface2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all .15s;
+}
+.icon-btn:hover { border-color: var(--wine); background: var(--wine-light); }
+
+/* ───────── CALENDAR ───────── */
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 3px;
+  margin-top: 6px;
+}
+.cal-day {
+  height: 28px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.68rem;
+  color: var(--text2);
+  cursor: pointer;
+  transition: all .12s;
+}
+.cal-day:hover { background: var(--wine-light); color: var(--wine); }
+.cal-day.hdr {
+  font-weight: 700;
+  color: var(--text3);
+  font-size: 0.62rem;
+  cursor: default;
+}
+.cal-day.done {
+  background: var(--wine-light);
+  color: var(--wine);
+  font-weight: 700;
+}
+.cal-day.today {
+  background: var(--wine);
+  color: #fff;
+  font-weight: 700;
+}
+
+/* ───────── LEVEL PICKER ───────── */
+.level-row {
+  display: flex;
+  gap: 6px;
+}
+.level-btn {
+  flex: 1;
+  padding: 10px 6px;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--border2);
+  text-align: center;
+  font-size: 0.74rem;
+  font-family: inherit;
+  cursor: pointer;
+  background: var(--surface);
+  color: var(--text2);
+  transition: all .15s;
+  font-weight: 500;
+}
+.level-btn.active {
+  border-color: var(--wine);
+  background: var(--wine-light);
+  color: var(--wine);
+  font-weight: 700;
+}
+.level-btn:hover:not(.active) { border-color: var(--wine-mid); color: var(--wine); }
+
+/* ───────── STATS ROW ───────── */
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 0;
+}
+.stat-card {
+  background: var(--surface2);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  padding: 10px 8px;
+  text-align: center;
+}
+.stat-num {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--wine);
+  font-family: 'DM Sans', sans-serif;
+  line-height: 1;
+}
+.stat-label {
+  font-size: 0.65rem;
+  color: var(--text2);
+  margin-top: 3px;
+}
+
+/* ───────── TIMER ANIMATION ───────── */
+@keyframes countdown {
+  from { stroke-dashoffset: 0; }
+  to   { stroke-dashoffset: 283; }
+}
+.donut-ring {
+  animation: countdown 30s linear forwards;
+  animation-play-state: paused;
+}
+.donut-ring.playing { animation-play-state: running; }
+
+/* ───────── TRANSLATE EXAMPLE ───────── */
+.translate-example {
+  background: var(--wine-xlight);
+  border: 1px solid var(--wine-light);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  margin-top: 8px;
+  font-size: 0.73rem;
+  color: var(--text2);
+  line-height: 1.6;
+}
+.translate-example strong { color: var(--wine); font-weight: 700; }
+
+/* ───────── CHIP SELECT ───────── */
+.chip-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.chip {
+  font-size: 0.72rem;
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1.5px solid var(--border2);
+  color: var(--text2);
+  cursor: pointer;
+  transition: all .15s;
+  font-family: inherit;
+  font-weight: 500;
+}
+.chip.active { background: var(--wine-light); color: var(--wine); border-color: var(--wine); font-weight: 700; }
+.chip:hover:not(.active) { border-color: var(--wine-mid); }
+
+/* ───────── ADDED CLIPS LIST ───────── */
+.clip-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: var(--surface2);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  margin-bottom: 6px;
+  font-size: 0.77rem;
+  color: var(--text1);
+  font-weight: 500;
+}
+.clip-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--wine);
+  flex-shrink: 0;
+}
+.clip-meta {
+  font-size: 0.68rem;
+  color: var(--text2);
+  margin-left: auto;
+}
+
+/* responsive clamp for very small screens */
+@media (max-width: 420px) {
+  .phone-shell, .phone-wrap { width: 100%; max-width: 375px; }
+}
+</style>
+</head>
+<body>
+
+<div class="page-title">
+  <h1>🎙 AudioFit</h1>
+  <p>나만의 홈트 라디오 — 모바일 UI 와이어프레임</p>
+</div>
+
+<!-- ───────── SCREEN NAV ───────── -->
+<div class="screen-nav">
+  <button class="active" onclick="showScreen('home',this)">🏠 홈</button>
+  <button onclick="showScreen('new',this)">✚ 새 루틴</button>
+  <button onclick="showScreen('player',this)">▶ 플레이어</button>
+  <button onclick="showScreen('library',this)">📁 보관함</button>
+  <button onclick="showScreen('mypage',this)">👤 마이페이지</button>
+</div>
+
+<!-- ───────── PHONE ───────── -->
+<div class="phone-wrap">
+  <div class="phone-shell">
+    <div class="notch"></div>
+
+    <!-- STATUS BAR -->
+    <div class="status-bar">
+      <span class="time">9:41</span>
+      <div class="icons">
+        <span>●●●</span>
+        <span>WiFi</span>
+        <span>🔋</span>
+      </div>
+    </div>
+
+    <!-- ══════ SCREEN 1: HOME ══════ -->
+    <div class="screen active" id="screen-home">
+      <div class="header">
+        <h2>AudioFit</h2>
+        <p>좋은 아침이에요 👋 오늘도 같이 운동해요</p>
+      </div>
+
+      <div class="section">
+        <div class="section-title">오늘의 추천 루틴</div>
+        <div class="card featured" onclick="showScreen('player', document.querySelector('.screen-nav button:nth-child(3)'))">
+          <div class="card-header">
+            <div>
+              <div class="card-title">🔥 아침 5분 코어 깨우기</div>
+              <div class="card-sub">5개 동작 · 15분 · 초보자용</div>
+            </div>
+            <span class="tag">추천</span>
+          </div>
+          <div class="tags">
+            <span class="tag">코어 강화</span>
+            <span class="tag">유산소</span>
+            <span class="tag-green tag">광고 없음</span>
+          </div>
+        </div>
+        <button class="btn-wine" onclick="showScreen('player', document.querySelector('.screen-nav button:nth-child(3)'))">▶ 지금 바로 시작</button>
+      </div>
+
+      <div class="section">
+        <div class="section-title">최근 재생한 루틴</div>
+        <div class="card" onclick="showScreen('player', document.querySelector('.screen-nav button:nth-child(3)'))">
+          <div class="card-header">
+            <div>
+              <div class="card-title">💪 전신 홈트 30분</div>
+              <div class="card-sub">어제 재생 · 8개 동작 · 30분</div>
+            </div>
+            <span style="font-size:0.72rem; color:var(--text3); margin-top:2px;">›</span>
+          </div>
+        </div>
+        <div class="card" onclick="showScreen('player', document.querySelector('.screen-nav button:nth-child(3)'))">
+          <div class="card-header">
+            <div>
+              <div class="card-title">🦵 하체 집중 스쿼트</div>
+              <div class="card-sub">3일 전 재생 · 6개 동작 · 20분</div>
+            </div>
+            <span style="font-size:0.72rem; color:var(--text3); margin-top:2px;">›</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">공유된 인기 루틴</div>
+        <div class="card">
+          <div class="card-title">🧘 자기 전 10분 스트레칭</div>
+          <div class="card-sub">❤️ 1,243명 저장 · 초보자 · 10분</div>
+          <div class="tags"><span class="tag">유연성</span><span class="tag">수면 개선</span></div>
+        </div>
+      </div>
+
+      <div class="tab-bar">
+        <div class="tab-item active" onclick="showScreen('home',document.querySelector('.screen-nav button:nth-child(1)'))">
+          <span class="tab-icon">🏠</span>홈
+        </div>
+        <div class="tab-item" onclick="showScreen('new',document.querySelector('.screen-nav button:nth-child(2)'))">
+          <span class="tab-icon">✚</span>새루틴
+        </div>
+        <div class="tab-item" onclick="showScreen('player',document.querySelector('.screen-nav button:nth-child(3)'))">
+          <span class="tab-icon">▶</span>재생
+        </div>
+        <div class="tab-item" onclick="showScreen('library',document.querySelector('.screen-nav button:nth-child(4)'))">
+          <span class="tab-icon">📁</span>보관함
+        </div>
+        <div class="tab-item" onclick="showScreen('mypage',document.querySelector('.screen-nav button:nth-child(5)'))">
+          <span class="tab-icon">👤</span>내정보
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════ SCREEN 2: NEW ROUTINE ══════ -->
+    <div class="screen" id="screen-new">
+      <div class="header">
+        <h2>새 루틴 만들기</h2>
+        <p>유튜브 링크를 붙여 넣으면 AI가 자동 분석해요</p>
+      </div>
+
+      <div class="section">
+        <div class="section-title-numbered">
+          <div class="step-num">1</div>유튜브 링크 입력
+        </div>
+        <input class="input-field" type="text" id="yt-link" placeholder="youtube.com/watch?v=..." />
+
+        <div id="clip-list">
+          <div class="clip-item">
+            <div class="clip-dot"></div>
+            전신 홈트 (닥터유)
+            <span class="clip-meta">14:32~28:00</span>
+          </div>
+        </div>
+
+        <button class="btn-outline" onclick="addClip()">+ 영상 추가하기</button>
+      </div>
+
+      <div class="section">
+        <div class="section-title-numbered">
+          <div class="step-num">2</div>구간 선택
+        </div>
+        <div class="time-inputs">
+          <div class="time-box">⏱ 시작 &nbsp;<strong id="start-val">00:00</strong></div>
+          <div class="time-box">🏁 종료 &nbsp;<strong id="end-val">18:00</strong></div>
+        </div>
+        <input class="real-range" type="range" min="0" max="60" value="36" id="seg-slider" oninput="updateSlider(this.value)"/>
+        <div class="range-labels">
+          <span>0:00</span><span>영상 전체 길이 60분</span>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title-numbered">
+          <div class="step-num">3</div>번역 모드
+        </div>
+        <div class="toggle-row">
+          <div>
+            <div class="toggle-label">초보자 언어로 바꾸기</div>
+          </div>
+          <div class="toggle" id="toggle-translate" onclick="toggleSwitch('toggle-translate')"></div>
+        </div>
+        <div class="translate-example">
+          <strong>버피 →</strong> "서서 뛰다가 바닥에 손 짚고 엎드렸다 일어나기"<br/>
+          <strong>플랭크 →</strong> "팔꿈치를 바닥에 대고 몸을 일자로 버티기"
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title-numbered">
+          <div class="step-num">4</div>루틴 이름 짓기
+        </div>
+        <input class="input-field" type="text" placeholder="예: 아침 10분 코어 루틴" />
+        <button class="btn-wine">✔ 루틴 저장하고 보관함에 추가</button>
+      </div>
+
+      <div class="tab-bar">
+        <div class="tab-item" onclick="showScreen('home',document.querySelector('.screen-nav button:nth-child(1)'))"><span class="tab-icon">🏠</span>홈</div>
+        <div class="tab-item active" onclick="showScreen('new',document.querySelector('.screen-nav button:nth-child(2)'))"><span class="tab-icon">✚</span>새루틴</div>
+        <div class="tab-item" onclick="showScreen('player',document.querySelector('.screen-nav button:nth-child(3)'))"><span class="tab-icon">▶</span>재생</div>
+        <div class="tab-item" onclick="showScreen('library',document.querySelector('.screen-nav button:nth-child(4)'))"><span class="tab-icon">📁</span>보관함</div>
+        <div class="tab-item" onclick="showScreen('mypage',document.querySelector('.screen-nav button:nth-child(5)'))"><span class="tab-icon">👤</span>내정보</div>
+      </div>
+    </div>
+
+    <!-- ══════ SCREEN 3: PLAYER ══════ -->
+    <div class="screen" id="screen-player">
+      <div class="header">
+        <div class="header-row">
+          <div>
+            <h2>아침 5분 코어 깨우기</h2>
+            <p id="player-step-label">3 / 5번째 동작</p>
+          </div>
+          <span class="header-icon">🔊</span>
+        </div>
+      </div>
+
+      <div class="progress-bar-wrap" style="padding-top:12px;">
+        <div class="progress-bar">
+          <div class="progress-fill" id="player-progress"></div>
+        </div>
+        <div class="progress-labels">
+          <span id="player-elapsed">6:12</span>
+          <span>15:00</span>
+        </div>
+      </div>
+
+      <div class="player-donut">
+        <svg class="donut-svg" width="148" height="148" viewBox="0 0 148 148">
+          <circle cx="74" cy="74" r="58" fill="none" stroke="var(--surface2)" stroke-width="12"/>
+          <circle id="donut-ring" cx="74" cy="74" r="58" fill="none"
+            stroke="var(--wine)" stroke-width="12"
+            stroke-dasharray="364"
+            stroke-dashoffset="0"
+            stroke-linecap="round"
+            transform="rotate(-90 74 74)"
+            style="transition: stroke-dashoffset 1s linear;"/>
+        </svg>
+        <div class="donut-center">
+          <div class="donut-time" id="timer-display">24</div>
+          <div class="donut-label">초 남음</div>
+        </div>
+      </div>
+
+      <div class="action-big" id="action-name">무릎 대고 팔굽혀 펴기</div>
+      <div class="action-desc" id="action-desc">
+        손은 어깨너비로 짚고, 무릎을 바닥에 댄 채 가슴이 바닥에 닿을 때까지 천천히 내려가요
+      </div>
+
+      <div class="next-hint">
+        다음 동작 → <strong id="next-action">엉덩이 들어올리기 (힙 브리지)</strong>
+      </div>
+
+      <div class="controls">
+        <div class="ctrl" onclick="prevExercise()" title="이전">⏮</div>
+        <div class="ctrl" onclick="seekBack()" title="-10초">⏪</div>
+        <div class="ctrl main" id="play-btn" onclick="togglePlay()">⏸</div>
+        <div class="ctrl" onclick="seekForward()" title="+10초">⏩</div>
+        <div class="ctrl" onclick="nextExercise()" title="다음">⏭</div>
+      </div>
+
+      <div class="speed-chips">
+        <div class="speed-chip" onclick="setSpeed(this,'0.75×')">0.75×</div>
+        <div class="speed-chip active" onclick="setSpeed(this,'1×')">1×</div>
+        <div class="speed-chip" onclick="setSpeed(this,'1.25×')">1.25×</div>
+        <div class="speed-chip" onclick="setSpeed(this,'1.5×')">1.5×</div>
+      </div>
+
+      <div class="tab-bar">
+        <div class="tab-item" onclick="showScreen('home',document.querySelector('.screen-nav button:nth-child(1)'))"><span class="tab-icon">🏠</span>홈</div>
+        <div class="tab-item" onclick="showScreen('new',document.querySelector('.screen-nav button:nth-child(2)'))"><span class="tab-icon">✚</span>새루틴</div>
+        <div class="tab-item active" onclick="showScreen('player',document.querySelector('.screen-nav button:nth-child(3)'))"><span class="tab-icon">▶</span>재생</div>
+        <div class="tab-item" onclick="showScreen('library',document.querySelector('.screen-nav button:nth-child(4)'))"><span class="tab-icon">📁</span>보관함</div>
+        <div class="tab-item" onclick="showScreen('mypage',document.querySelector('.screen-nav button:nth-child(5)'))"><span class="tab-icon">👤</span>내정보</div>
+      </div>
+    </div>
+
+    <!-- ══════ SCREEN 4: LIBRARY ══════ -->
+    <div class="screen" id="screen-library">
+      <div class="header">
+        <h2>내 루틴 보관함</h2>
+        <p>저장된 루틴 4개</p>
+      </div>
+
+      <div class="section" style="padding-bottom:8px;">
+        <input class="input-field" type="text" placeholder="🔍 루틴 이름 검색..." style="margin-bottom:0;"/>
+      </div>
+
+      <div class="section" style="padding-top:8px;">
+        <div id="library-list">
+          <div class="routine-item">
+            <div class="routine-thumb">🔥</div>
+            <div class="routine-info">
+              <div class="routine-name">아침 5분 코어 깨우기</div>
+              <div class="routine-meta">5개 동작 · 15분 · 초보자</div>
+            </div>
+            <div class="routine-actions">
+              <div class="icon-btn" title="편집">✏️</div>
+              <div class="icon-btn" title="공유">↗</div>
+              <div class="icon-btn" title="삭제" onclick="deleteRoutine(this)">🗑</div>
+            </div>
+          </div>
+          <div class="routine-item">
+            <div class="routine-thumb">💪</div>
+            <div class="routine-info">
+              <div class="routine-name">전신 홈트 30분</div>
+              <div class="routine-meta">8개 동작 · 30분 · 중급자</div>
+            </div>
+            <div class="routine-actions">
+              <div class="icon-btn">✏️</div>
+              <div class="icon-btn">↗</div>
+              <div class="icon-btn" onclick="deleteRoutine(this)">🗑</div>
+            </div>
+          </div>
+          <div class="routine-item">
+            <div class="routine-thumb">🦵</div>
+            <div class="routine-info">
+              <div class="routine-name">하체 집중 스쿼트</div>
+              <div class="routine-meta">6개 동작 · 20분 · 초보자</div>
+            </div>
+            <div class="routine-actions">
+              <div class="icon-btn">✏️</div>
+              <div class="icon-btn">↗</div>
+              <div class="icon-btn" onclick="deleteRoutine(this)">🗑</div>
+            </div>
+          </div>
+          <div class="routine-item">
+            <div class="routine-thumb">🧘</div>
+            <div class="routine-info">
+              <div class="routine-name">자기 전 스트레칭</div>
+              <div class="routine-meta">4개 동작 · 10분 · 초보자</div>
+            </div>
+            <div class="routine-actions">
+              <div class="icon-btn">✏️</div>
+              <div class="icon-btn">↗</div>
+              <div class="icon-btn" onclick="deleteRoutine(this)">🗑</div>
+            </div>
+          </div>
+        </div>
+        <button class="btn-outline" onclick="showScreen('new',document.querySelector('.screen-nav button:nth-child(2)'))">+ 새 루틴 만들기</button>
+      </div>
+
+      <div class="tab-bar">
+        <div class="tab-item" onclick="showScreen('home',document.querySelector('.screen-nav button:nth-child(1)'))"><span class="tab-icon">🏠</span>홈</div>
+        <div class="tab-item" onclick="showScreen('new',document.querySelector('.screen-nav button:nth-child(2)'))"><span class="tab-icon">✚</span>새루틴</div>
+        <div class="tab-item" onclick="showScreen('player',document.querySelector('.screen-nav button:nth-child(3)'))"><span class="tab-icon">▶</span>재생</div>
+        <div class="tab-item active" onclick="showScreen('library',document.querySelector('.screen-nav button:nth-child(4)'))"><span class="tab-icon">📁</span>보관함</div>
+        <div class="tab-item" onclick="showScreen('mypage',document.querySelector('.screen-nav button:nth-child(5)'))"><span class="tab-icon">👤</span>내정보</div>
+      </div>
+    </div>
+
+    <!-- ══════ SCREEN 5: MYPAGE ══════ -->
+    <div class="screen" id="screen-mypage">
+      <div class="header">
+        <h2>마이페이지</h2>
+        <p>이번 달 12회 운동했어요 🎉</p>
+      </div>
+
+      <div class="section">
+        <div class="stats-row">
+          <div class="stat-card">
+            <div class="stat-num">12</div>
+            <div class="stat-label">이번 달 운동</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-num">4</div>
+            <div class="stat-label">저장된 루틴</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-num">3h</div>
+            <div class="stat-label">총 운동 시간</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">5월 운동 기록</div>
+        <div class="cal-grid">
+          <div class="cal-day hdr">월</div><div class="cal-day hdr">화</div>
+          <div class="cal-day hdr">수</div><div class="cal-day hdr">목</div>
+          <div class="cal-day hdr">금</div><div class="cal-day hdr">토</div>
+          <div class="cal-day hdr">일</div>
+          <div class="cal-day"></div>
+          <div class="cal-day done">6</div><div class="cal-day">7</div>
+          <div class="cal-day done">8</div><div class="cal-day">9</div>
+          <div class="cal-day done">10</div><div class="cal-day">11</div>
+          <div class="cal-day done">13</div><div class="cal-day">14</div>
+          <div class="cal-day done">15</div><div class="cal-day">16</div>
+          <div class="cal-day done">17</div><div class="cal-day">18</div>
+          <div class="cal-day today">19</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">나의 체력 수준</div>
+        <div class="level-row">
+          <button class="level-btn active" onclick="setLevel(this)">🌱 완전 초보</button>
+          <button class="level-btn" onclick="setLevel(this)">🔥 중급자</button>
+          <button class="level-btn" onclick="setLevel(this)">💪 고급자</button>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">설정</div>
+        <div class="toggle-row">
+          <div>
+            <div class="toggle-label">용어 쉬운 말로 바꾸기</div>
+          </div>
+          <div class="toggle" id="t1" onclick="toggleSwitch('t1')"></div>
+        </div>
+        <div class="toggle-row">
+          <div>
+            <div class="toggle-label">운동 시작 알림 받기</div>
+          </div>
+          <div class="toggle off" id="t2" onclick="toggleSwitch('t2')"></div>
+        </div>
+        <div class="toggle-row">
+          <div>
+            <div class="toggle-label">음성 코칭 속도</div>
+          </div>
+          <div style="font-size:0.78rem; color:var(--wine); font-weight:700; cursor:pointer;">1× 보통 ›</div>
+        </div>
+        <div class="toggle-row">
+          <div>
+            <div class="toggle-label">다크 모드</div>
+          </div>
+          <div class="toggle off" id="t3" onclick="toggleSwitch('t3')"></div>
+        </div>
+      </div>
+
+      <div class="tab-bar">
+        <div class="tab-item" onclick="showScreen('home',document.querySelector('.screen-nav button:nth-child(1)'))"><span class="tab-icon">🏠</span>홈</div>
+        <div class="tab-item" onclick="showScreen('new',document.querySelector('.screen-nav button:nth-child(2)'))"><span class="tab-icon">✚</span>새루틴</div>
+        <div class="tab-item" onclick="showScreen('player',document.querySelector('.screen-nav button:nth-child(3)'))"><span class="tab-icon">▶</span>재생</div>
+        <div class="tab-item" onclick="showScreen('library',document.querySelector('.screen-nav button:nth-child(4)'))"><span class="tab-icon">📁</span>보관함</div>
+        <div class="tab-item active" onclick="showScreen('mypage',document.querySelector('.screen-nav button:nth-child(5)'))"><span class="tab-icon">👤</span>내정보</div>
+      </div>
+    </div>
+
+  </div><!-- /phone-shell -->
+</div><!-- /phone-wrap -->
+
+<!-- ───────── JS ───────── -->
+<script>
+/* ──── SCREEN SWITCH ──── */
+const screenMap = {home:'screen-home', new:'screen-new', player:'screen-player', library:'screen-library', mypage:'screen-mypage'};
+function showScreen(id, navBtn) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  const el = document.getElementById(screenMap[id]);
+  if (el) {
+    el.classList.add('active');
+    // re-trigger animation
+    const wrap = document.querySelector('.phone-wrap');
+    wrap.style.animation = 'none';
+    requestAnimationFrame(() => { wrap.style.animation = ''; });
+  }
+  document.querySelectorAll('.screen-nav button').forEach(b => b.classList.remove('active'));
+  if (navBtn) navBtn.classList.add('active');
+  // update all tab bars
+  const tabIdx = {home:0, new:1, player:2, library:3, mypage:4};
+  document.querySelectorAll('.screen.active .tab-item').forEach((t,i) => {
+    t.classList.toggle('active', i === tabIdx[id]);
+  });
+  if (id === 'player' && !timerRunning) startTimer();
+}
+
+/* ──── TOGGLE ──── */
+function toggleSwitch(id) {
+  const el = document.getElementById(id);
+  if (el) el.classList.toggle('off');
+}
+
+/* ──── SLIDER ──── */
+function updateSlider(val) {
+  const mins = Math.round(val * 60 / 100);
+  document.getElementById('end-val').textContent = `${String(Math.floor(mins/60)).padStart(2,'0')}:${String(mins%60).padStart(2,'0')}`;
+  const slider = document.getElementById('seg-slider');
+  slider.style.background = `linear-gradient(to right, var(--wine) 0%, var(--wine) ${val}%, var(--surface2) ${val}%)`;
+}
+
+/* ──── ADD CLIP ──── */
+function addClip() {
+  const link = document.getElementById('yt-link').value.trim();
+  const label = link ? link.slice(0,28) + '…' : '새 영상 클립';
+  const div = document.createElement('div');
+  div.className = 'clip-item';
+  div.innerHTML = `<div class="clip-dot"></div>${label}<span class="clip-meta">전체 구간</span>`;
+  document.getElementById('clip-list').appendChild(div);
+  document.getElementById('yt-link').value = '';
+}
+
+/* ──── PLAYER ──── */
+const exercises = [
+  { name: '기지개 스트레칭', desc: '등을 바닥에 대고 누워 두 팔을 머리 위로 쭉 뻗어요', next: '고양이 자세' },
+  { name: '고양이 자세', desc: '무릎과 손을 바닥에 대고, 등을 천장으로 동그랗게 말아요', next: '플랭크 (버티기)' },
+  { name: '무릎 대고 팔굽혀 펴기', desc: '손은 어깨너비로 짚고, 무릎을 바닥에 댄 채 가슴이 바닥에 닿을 때까지 천천히 내려가요', next: '엉덩이 들어올리기' },
+  { name: '엉덩이 들어올리기 (힙 브리지)', desc: '무릎을 세워 눕고, 발꿈치로 바닥을 밀며 엉덩이를 천장 쪽으로 들어올려요', next: '제자리 마무리 걷기' },
+  { name: '제자리 마무리 걷기', desc: '제자리에서 천천히 무릎을 들어올리며 걸어요. 거의 다 왔어요! 👏', next: '완료!' },
+];
+let curEx = 2, timerSec = 24, timerRunning = false, timerInterval = null;
+const TOTAL_SEC = 30;
+
+function renderExercise() {
+  const ex = exercises[curEx];
+  document.getElementById('action-name').textContent = ex.name;
+  document.getElementById('action-desc').textContent = ex.desc;
+  document.getElementById('next-action').textContent = ex.next;
+  document.getElementById('player-step-label').textContent = `${curEx+1} / ${exercises.length}번째 동작`;
+  timerSec = TOTAL_SEC;
+  updateDonut();
+}
+function updateDonut() {
+  document.getElementById('timer-display').textContent = timerSec;
+  const circ = 2 * Math.PI * 58;
+  const offset = circ * (1 - timerSec / TOTAL_SEC);
+  document.getElementById('donut-ring').style.strokeDashoffset = offset;
+}
+function startTimer() {
+  if (timerInterval) clearInterval(timerInterval);
+  timerRunning = true;
+  timerInterval = setInterval(() => {
+    if (timerSec > 0) { timerSec--; updateDonut(); }
+    else { nextExercise(); }
+  }, 1000);
+}
+function togglePlay() {
+  const btn = document.getElementById('play-btn');
+  if (timerRunning) {
+    clearInterval(timerInterval); timerRunning = false;
+    btn.textContent = '▶';
+  } else {
+    startTimer(); btn.textContent = '⏸';
+  }
+}
+function nextExercise() {
+  if (curEx < exercises.length - 1) { curEx++; renderExercise(); }
+}
+function prevExercise() {
+  if (curEx > 0) { curEx--; renderExercise(); }
+}
+function seekForward() { timerSec = Math.max(0, timerSec - 10); updateDonut(); }
+function seekBack()    { timerSec = Math.min(TOTAL_SEC, timerSec + 10); updateDonut(); }
+function setSpeed(el, label) {
+  document.querySelectorAll('.speed-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+}
+
+/* ──── LIBRARY DELETE ──── */
+function deleteRoutine(btn) {
+  const item = btn.closest('.routine-item');
+  item.style.transition = 'opacity .2s, transform .2s';
+  item.style.opacity = '0';
+  item.style.transform = 'translateX(20px)';
+  setTimeout(() => item.remove(), 200);
+}
+
+/* ──── LEVEL ──── */
+function setLevel(btn) {
+  document.querySelectorAll('.level-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+/* init */
+updateSlider(60);
+renderExercise();
+</script>
+</body>
+</html>
