@@ -15,9 +15,14 @@ overview: AudioFit 백엔드의 Firebase 기반 로그인 인증 기능 구현 �
 - 백엔드는 Firebase ID 토큰을 검증하고, 요청이 인증된 사용자로부터 왔다는 것을 보장합니다.
 - 이후 루틴 생성, 보관함, 세션 저장 등 모든 사용자별 API는 이 인증 기반 위에서 동작합니다.
 
-## 3. 구현한 기능
+## 3. 인증 방식: Google OAuth
 
-### 3.1. 백엔드 인증 모듈
+AudioFit은 Firebase의 Google OAuth를 사용하여 사용자 인증을 처리합니다. 
+Google 계정으로 로그인하면 자동으로 사용자가 등록되고, 이후 API 호출 시 Firebase ID 토큰을 백엔드로 전달합니다.
+
+## 4. 구현한 기능
+
+### 4.1. 백엔드 인증 모듈
 
 `backend/apps/users/authentication.py`에 Firebase ID 토큰 검증기(`FirebaseAuthentication`)를 추가했습니다.
 
@@ -96,8 +101,8 @@ curl -H "Authorization: Bearer <Firebase ID Token>" http://localhost:8000/api/v1
 ### 5.1. 추가한 프론트엔드 구현
 
 - `frontend/src/firebaseConfig.js`에서 Firebase 앱을 초기화합니다.
-- `frontend/src/contexts/AuthContext.jsx`에서 인증 상태, 로그인/회원가입/로그아웃 함수를 제공합니다.
-- `frontend/src/components/screens/LoginScreen.jsx`에서 이메일/비밀번호 기반 로그인 및 회원가입 UI를 추가했습니다.
+- `frontend/src/contexts/AuthContext.jsx`에서 인증 상태, Google 로그인/로그아웃 함수를 제공합니다.
+- `frontend/src/components/screens/LoginScreen.jsx`에서 Google OAuth 기반 로그인 버튼을 표시합니다.
 - `frontend/src/App.jsx`는 로그인 상태에 따라 로그인 화면 또는 메인 앱을 전환합니다.
 - `frontend/src/components/AudioFitWireframe.jsx`와 `frontend/src/components/screens/MyPageScreen.jsx`에 사용자 정보와 로그아웃 버튼을 전달합니다.
 
@@ -112,6 +117,19 @@ VITE_FIREBASE_PROJECT_ID=your-project-id
 VITE_FIREBASE_APP_ID=your-app-id
 VITE_FIREBASE_MEASUREMENT_ID=G-XXXXXXXXXX
 VITE_API_BASE_URL=http://localhost:8000
+```
+
+### 5.3. 로컬 개발용 DB 의존성
+
+현재 `backend/settings.py`는 기본 SQLite를 사용하므로 로컬 개발 환경에서는 `backend/requirements.txt`만 설치하면 됩니다.
+
+`requirements.txt`에서 `Pillow`를 제거했습니다. 현재 백엔드 코드에는 이미지를 직접 처리하는 기능이 없기 때문에 로컬 설치 과정에서 불필요한 빌드 오류가 발생하는 요소를 제거했습니다.
+
+PostgreSQL을 사용하려면 `backend/requirements-postgres.txt`를 설치하고, PostgreSQL 클라이언트가 시스템에 설치되어 있어야 합니다.
+
+```bash
+cd backend
+pip install -r requirements-postgres.txt
 ```
 
 ## 6. 다음 작업
