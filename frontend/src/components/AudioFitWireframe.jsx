@@ -55,7 +55,7 @@ function calcDonutOffset(timerSec) {
   return circ * (1 - timerSec / TOTAL_SEC);
 }
 
-function AudioFitWireframe() {
+function AudioFitWireframe({ user, onLogout }) {
   const [activeScreen, setActiveScreen] = useState('home');
 
   const [ytLink, setYtLink] = useState('');
@@ -143,6 +143,8 @@ function AudioFitWireframe() {
       case 'mypage':
         return (
           <MyPageScreen
+            user={user}
+            onLogout={onLogout}
             fitnessLevel={fitnessLevel}
             onSetLevel={handleSetLevel}
             settingsToggles={settingsToggles}

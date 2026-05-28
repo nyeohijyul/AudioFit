@@ -21,9 +21,21 @@ const LEVEL_OPTIONS = [
   { id: 'advanced', label: '💪 고급자' },
 ];
 
-function MyPageScreen({ fitnessLevel, onSetLevel, settingsToggles, onToggleSetting }) {
+function MyPageScreen({ user, onLogout, fitnessLevel, onSetLevel, settingsToggles, onToggleSetting }) {
   return (
-    <ScreenLayout screenId="screen-mypage" title="마이페이지" subtitle="이번 달 12회 운동했어요 🎉">
+    <ScreenLayout
+      screenId="screen-mypage"
+      title="마이페이지"
+      subtitle={user?.email ? `${user.email} 님, 환영합니다!` : '이번 달 12회 운동했어요 🎉'}
+    >
+      {user?.email && (
+        <div className="section" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div className="section-title">로그인된 계정</div>
+          <button type="button" className="link-btn" onClick={onLogout}>
+            로그아웃
+          </button>
+        </div>
+      )}
       <div className="section">
         <div className="stats-row">
           <div className="stat-card">

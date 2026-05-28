@@ -93,6 +93,27 @@ curl -H "Authorization: Bearer <Firebase ID Token>" http://localhost:8000/api/v1
 3. 백엔드 API 요청에 `Authorization: Bearer <token>` 헤더 추가
 4. 백엔드 `/api/v1/auth/verify/` 또는 보호된 API를 호출
 
+### 5.1. 추가한 프론트엔드 구현
+
+- `frontend/src/firebaseConfig.js`에서 Firebase 앱을 초기화합니다.
+- `frontend/src/contexts/AuthContext.jsx`에서 인증 상태, 로그인/회원가입/로그아웃 함수를 제공합니다.
+- `frontend/src/components/screens/LoginScreen.jsx`에서 이메일/비밀번호 기반 로그인 및 회원가입 UI를 추가했습니다.
+- `frontend/src/App.jsx`는 로그인 상태에 따라 로그인 화면 또는 메인 앱을 전환합니다.
+- `frontend/src/components/AudioFitWireframe.jsx`와 `frontend/src/components/screens/MyPageScreen.jsx`에 사용자 정보와 로그아웃 버튼을 전달합니다.
+
+### 5.2. 프론트엔드 환경 변수
+
+`frontend/.env.example`에 다음을 추가했습니다.
+
+```env
+VITE_FIREBASE_API_KEY=your-api-key
+VITE_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=your-project-id
+VITE_FIREBASE_APP_ID=your-app-id
+VITE_FIREBASE_MEASUREMENT_ID=G-XXXXXXXXXX
+VITE_API_BASE_URL=http://localhost:8000
+```
+
 ## 6. 다음 작업
 
 - 프론트엔드에 로그인/회원가입 화면 추가
