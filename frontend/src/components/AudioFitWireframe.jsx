@@ -34,6 +34,8 @@ import NewRoutineScreen from './screens/NewRoutineScreen';
 import PlayerScreen from './screens/PlayerScreen';
 import LibraryScreen from './screens/LibraryScreen';
 import MyPageScreen from './screens/MyPageScreen';
+import YoutubeInputModal from './YoutubeInputModal';
+import SubtitleEditorModal from './SubtitleEditorModal';
 
 /**
  * 슬라이더 값(0~max)을 종료 시각 문자열(mm:ss)로 변환합니다 (원본 updateSlider).
@@ -85,6 +87,10 @@ function AudioFitWireframe({ user, onLogout }) {
   const endVal = useMemo(() => formatEndTime(segSlider), [segSlider]);
   const donutOffset = useMemo(() => calcDonutOffset(timerSec), [timerSec]);
 
+  const [showYoutubeModal, setShowYoutubeModal] = useState(false);
+  const [showSubtitleModal, setShowSubtitleModal] = useState(false);
+  const [selectedClipId, setSelectedClipId] = useState(null);
+
   /**
    * 화면을 전환합니다. TabBar는 유지되고 활성 Screen만 교체됩니다 (원본 showScreen).
    * @param {string} screenId - home | new | player | library | mypage
@@ -108,6 +114,8 @@ function AudioFitWireframe({ user, onLogout }) {
             setYtLink={setYtLink}
             clips={clips}
             onAddClip={handleAddClip}
+            onDeleteClip={handleDeleteClip}
+            onOpenSubtitleEditor={handleOpenSubtitleEditor}
             segSlider={segSlider}
             setSegSlider={setSegSlider}
             endVal={endVal}
@@ -280,13 +288,31 @@ function AudioFitWireframe({ user, onLogout }) {
    * 유튜브 클립 추가 (원본 addClip).
    */
   const handleAddClip = useCallback(() => {
-    const trimmed = ytLink.trim();
-    const label = trimmed ? `${trimmed.slice(0, 28)}…` : '새 영상 클립';
-    const id = `clip-${clipIdRef.current}`;
-    clipIdRef.current += 1;
-    setClips((prev) => [...prev, { id, label, meta: '전체 구간' }]);
-    setYtLink('');
+    // Open the modal to add a clip (frontend wireframe)
+    setShowYoutubeModal(true);
   }, [ytLink]);
+
+  const handleConfirmAddClip = useCallback((payload) => {
+    const id = payload.id || `clip-${clipIdRef.current++}`;
+    const label = payload.label || '새 영상 클립';
+    const meta = payload.meta || payload.duration || '전체 구간';
+    setClips((prev) => [...prev, { id, label, meta, url: payload.url }]);
+    setShowYoutubeModal(false);
+  }, []);
+
+  const handleDeleteClip = useCallback((id) => {
+    setClips((prev) => prev.filter((c) => c.id !== id));
+  }, []);
+
+  const handleOpenSubtitleEditor = useCallback((clipId) => {
+    setSelectedClipId(clipId);
+    setShowSubtitleModal(true);
+  }, []);
+
+  const handleSaveSubtitles = useCallback((subtitles) => {
+    setClips((prev) => prev.map((c) => (c.id === selectedClipId ? { ...c, subtitles } : c)));
+    setShowSubtitleModal(false);
+  }, [selectedClipId]);
 
   /**
    * 번역 모드 토글 반전.
@@ -353,6 +379,18 @@ function AudioFitWireframe({ user, onLogout }) {
           <div className="screen-area" key={activeScreen}>
             {renderActiveScreen()}
           </div>
+
+          {showYoutubeModal && (
+            <YoutubeInputModal onClose={() => setShowYoutubeModal(false)} onConfirm={handleConfirmAddClip} />
+          )}
+
+          {showSubtitleModal && (
+            <SubtitleEditorModal
+              clip={clips.find((c) => c.id === selectedClipId) || null}
+              onClose={() => setShowSubtitleModal(false)}
+              onSave={handleSaveSubtitles}
+            />
+          )}
 
           <TabBar activeScreen={activeScreen} onNavigate={showScreen} />
         </div>

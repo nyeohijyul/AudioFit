@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AudioFit — 자막 처리 화면</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet"/>
+<style>
+/* ───── TOKENS ───── */
+:root {
+  --wine: #8B1A2E;
+  --wine-dark: #6a1222;
+  --wine-mid: #c94a62;
+  --wine-light: #f5e6e9;
+  --wine-xlight: #fdf3f5;
+  --bg: #f7f5f2;
+  --surface: #ffffff;
+  --surface2: #f3f0ed;
+  --border: rgba(0,0,0,0.08);
+  --border2: rgba(0,0,0,0.13);
+  --text1: #1a1614;
+  --text2: #6b645e;
+  --text3: #a09790;
+  --green: #2d7a4f;
+  --green-light: #e6f4ec;
+  --amber: #92610a;
+  --amber-light: #fdf3e3;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --shadow: 0 2px 16px rgba(139,26,46,0.10);
+  --shadow-sm: 0 1px 4px rgba(0,0,0,0.06);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 16px; }
+body {
+  font-family: 'Noto Sans KR', 'DM Sans', sans-serif;
+  background: var(--bg);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 2rem 1rem 4rem;
+}
+
+.page-title { text-align: center; margin-bottom: 2rem; }
+.page-title h1 { font-size: 1.4rem; font-weight: 700; color: var(--wine); letter-spacing: -0.02em; }
+.page-title p  { font-size: 0.8rem; color: var(--text2); margin-top: 4px; }
+.screen-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--wine-light);
+  color: var(--wine);
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 5px 14px;
+  border-radius: 999px;
+  margin-bottom: 1.6rem;
+  letter-spacing: 0.03em;
+}
+
+/* ───── PHONE SHELL ───── */
+.phone-wrap { width: 375px; animation: fadeUp .35s ease both; }
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.phone-shell {
+  width: 375px;
+  background: var(--surface);
+  border-radius: 44px;
+  border: 2px solid rgba(0,0,0,0.12);
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.14), 0 4px 12px rgba(0,0,0,0.08);
+  position: relative;
+}
+.notch {
+  position: absolute; top: 0; left: 50%;
+  transform: translateX(-50%);
+  width: 120px; height: 30px;
+  background: #111;
+  border-radius: 0 0 18px 18px;
+  z-index: 10;
+}
+.status-bar {
+  height: 44px;
+  background: var(--wine);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 28px 0 24px;
+}
+.status-bar .time { font-size: 13px; font-weight: 700; color: #fff; font-family: 'DM Sans', sans-serif; }
+.status-bar .icons { display: flex; gap: 6px; align-items: center; }
+.status-bar .icons span { font-size: 12px; color: rgba(255,255,255,0.85); }
+
+/* ───── HEADER ───── */
+.header {
+  background: var(--wine);
+  padding: 16px 20px 18px;
+  flex-shrink: 0;
+}
+.header-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+.back-btn {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  color: #fff;
+  cursor: pointer;
+  flex-shrink: 0;
+  border: none;
+  transition: background .15s;
+}
+.back-btn:hover { background: rgba(255,255,255,0.25); }
+.header h2 { font-size: 1rem; font-weight: 700; color: #fff; letter-spacing: -0.01em; flex: 1; }
+/* 영상 정보 칩 */
+.header-video-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255,255,255,0.12);
+  border-radius: 8px;
+  padding: 6px 10px;
+  border: 1px solid rgba(255,255,255,0.15);
+}
+.header-video-chip .vc-thumb {
+  width: 28px; height: 20px;
+  border-radius: 4px;
+  background: rgba(255,255,255,0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.6rem;
+  color: rgba(255,255,255,0.9);
+  flex-shrink: 0;
+}
+.header-video-chip .vc-info { flex: 1; min-width: 0; }
+.vc-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.vc-meta {
+  font-size: 0.62rem;
+  color: rgba(255,255,255,0.65);
+}
+
+/* ───── SCREEN ───── */
+.screen {
+  min-height: 748px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.section {
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.section:last-of-type { border-bottom: none; }
+.section-title {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin-bottom: 10px;
+}
+
+/* ───── MODE TOGGLE BAR ───── */
+.mode-bar {
+  display: flex;
+  background: var(--surface2);
+  border-radius: var(--radius-sm);
+  padding: 3px;
+  gap: 3px;
+  margin-bottom: 12px;
+}
+.mode-btn {
+  flex: 1;
+  padding: 8px 0;
+  border-radius: 6px;
+  border: none;
+  font-family: inherit;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all .18s;
+  background: transparent;
+  color: var(--text2);
+}
+.mode-btn.active {
+  background: var(--wine);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(139,26,46,0.22);
+}
+
+/* ───── AI BUTTON ───── */
+.ai-banner {
+  background: linear-gradient(135deg, var(--wine-xlight) 0%, #f9e8f0 100%);
+  border: 1.5px solid var(--wine-light);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  margin-bottom: 12px;
+}
+.ai-banner-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.ai-icon-wrap {
+  width: 38px; height: 38px;
+  border-radius: 10px;
+  background: var(--wine);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+.ai-text { flex: 1; }
+.ai-text-title { font-size: 0.82rem; font-weight: 700; color: var(--text1); margin-bottom: 2px; }
+.ai-text-sub   { font-size: 0.72rem; color: var(--text2); line-height: 1.4; }
+.btn-ai {
+  display: block;
+  width: 100%;
+  margin-top: 10px;
+  background: var(--wine);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 11px 0;
+  font-size: 0.84rem;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background .15s, transform .1s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.btn-ai:hover { background: var(--wine-dark); transform: translateY(-1px); }
+.btn-ai:active { transform: scale(0.98); }
+.ai-progress {
+  margin-top: 10px;
+  display: none;
+}
+.ai-progress.show { display: block; }
+.ai-progress-bar {
+  height: 4px;
+  background: var(--border);
+  border-radius: 999px;
+  overflow: hidden;
+  margin-bottom: 5px;
+}
+.ai-progress-fill {
+  height: 100%;
+  background: var(--wine);
+  border-radius: 999px;
+  width: 0%;
+  transition: width .3s ease;
+}
+.ai-progress-label {
+  font-size: 0.7rem;
+  color: var(--text2);
+  text-align: center;
+}
+
+/* ───── SUBTITLE LIST ───── */
+.subtitle-list-wrap {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 20px 8px;
+}
+.subtitle-list-wrap::-webkit-scrollbar { display: none; }
+
+.sub-item {
+  display: flex;
+  gap: 8px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background .12s;
+  border-radius: 4px;
+}
+.sub-item:last-child { border-bottom: none; }
+.sub-item:hover { background: var(--wine-xlight); padding-left: 4px; }
+.sub-item.selected {
+  background: var(--wine-xlight);
+  border-left: 3px solid var(--wine);
+  padding-left: 10px;
+  margin-left: -3px;
+}
+
+/* 체크박스 */
+.sub-check {
+  width: 18px; height: 18px;
+  border-radius: 5px;
+  border: 1.5px solid var(--border2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  flex-shrink: 0;
+  margin-top: 1px;
+  transition: all .15s;
+  background: var(--surface);
+}
+.sub-item.selected .sub-check {
+  background: var(--wine);
+  border-color: var(--wine);
+  color: #fff;
+}
+.sub-content { flex: 1; min-width: 0; }
+.sub-time {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--wine);
+  font-family: 'DM Sans', sans-serif;
+  margin-bottom: 3px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.sub-time .action-tag {
+  font-size: 0.6rem;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: var(--wine-light);
+  color: var(--wine);
+  font-family: inherit;
+}
+.sub-original {
+  font-size: 0.8rem;
+  color: var(--text1);
+  line-height: 1.55;
+  font-weight: 500;
+}
+/* AI 변환 후 텍스트 */
+.sub-translated {
+  font-size: 0.78rem;
+  color: var(--green);
+  line-height: 1.55;
+  font-weight: 500;
+  margin-top: 4px;
+  display: none;
+}
+.sub-translated.show { display: block; }
+.translate-arrow {
+  font-size: 0.7rem;
+  color: var(--text3);
+  margin: 2px 0;
+  display: none;
+}
+.translate-arrow.show { display: block; }
+.sub-skip {
+  font-size: 0.65rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: #f3f0ed;
+  color: var(--text3);
+  border: 1px dashed var(--border2);
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-top: 4px;
+  cursor: pointer;
+  transition: all .15s;
+}
+.sub-skip:hover { border-color: var(--wine); color: var(--wine); }
+
+/* 광고 구간 표시 */
+.ad-divider {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 0;
+}
+.ad-divider::before, .ad-divider::after {
+  content: ''; flex: 1; height: 1px;
+  background: repeating-linear-gradient(90deg, var(--border2) 0, var(--border2) 4px, transparent 4px, transparent 8px);
+}
+.ad-label {
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: var(--text3);
+  padding: 2px 7px;
+  background: var(--surface2);
+  border-radius: 4px;
+  border: 1px solid var(--border2);
+}
+
+/* ───── BOTTOM ACTION BAR ───── */
+.bottom-bar {
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  padding: 12px 20px 20px;
+  flex-shrink: 0;
+}
+.bottom-bar-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.select-count {
+  font-size: 0.78rem;
+  color: var(--text2);
+  font-weight: 500;
+}
+.select-count strong { color: var(--wine); font-weight: 700; }
+.select-all-btn {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--wine);
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  padding: 0;
+}
+.btn-save {
+  display: block;
+  width: 100%;
+  background: var(--wine);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 13px 0;
+  font-size: 0.88rem;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background .15s, transform .12s;
+}
+.btn-save:hover { background: var(--wine-dark); transform: translateY(-1px); }
+
+/* ───── TAB BAR ───── */
+.tab-bar {
+  display: flex;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+  padding: 8px 0 16px;
+}
+.tab-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  font-size: 0.62rem;
+  color: var(--text3);
+  cursor: pointer;
+  padding: 4px 0;
+}
+.tab-item .ti { font-size: 1.1rem; }
+.tab-item.active { color: var(--wine); font-weight: 700; }
+
+/* ───── ANNOTATION ───── */
+.annotation {
+  width: 375px;
+  margin-top: 1.8rem;
+  background: var(--surface);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border2);
+  padding: 16px 18px;
+  box-shadow: var(--shadow-sm);
+}
+.annotation h3 {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--wine);
+  margin-bottom: 10px;
+}
+.anno-row { display: flex; gap: 8px; margin-bottom: 7px; }
+.anno-row:last-child { margin-bottom: 0; }
+.anno-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--wine); flex-shrink: 0; margin-top: 5px; }
+.anno-text { font-size: 0.75rem; color: var(--text2); line-height: 1.5; }
+.anno-text strong { color: var(--text1); font-weight: 700; }
+
+/* ───── TOAST ───── */
+.toast {
+  position: fixed;
+  bottom: 4rem;
+  left: 50%;
+  transform: translateX(-50%) translateY(12px);
+  background: var(--text1);
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 500;
+  padding: 9px 20px;
+  border-radius: 999px;
+  opacity: 0;
+  pointer-events: none;
+  transition: all .25s;
+  white-space: nowrap;
+  z-index: 999;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="page-title">
+  <h1>🎙 AudioFit</h1>
+  <p>나만의 홈트 라디오 — UI 와이어프레임</p>
+</div>
+
+<div class="screen-badge">📱 화면 3 — 자막 처리 & AI 변환</div>
+
+<div class="phone-wrap">
+  <div class="phone-shell">
+    <div class="notch"></div>
+
+    <!-- STATUS BAR -->
+    <div class="status-bar">
+      <span class="time">9:41</span>
+      <div class="icons"><span>●●●</span><span>WiFi</span><span>🔋</span></div>
+    </div>
+
+    <div class="screen">
+
+      <!-- HEADER -->
+      <div class="header">
+        <div class="header-row">
+          <button class="back-btn">←</button>
+          <h2>자막 편집</h2>
+        </div>
+        <div class="header-video-chip">
+          <div class="vc-thumb">▶</div>
+          <div class="vc-info">
+            <div class="vc-title">닥터유 — 초보자 전신 20분 홈트 루틴</div>
+            <div class="vc-meta">구간 14:32 ~ 28:00 · 총 24개 자막</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODE & AI SECTION -->
+      <div class="section">
+        <!-- 보기 모드 토글 -->
+        <div class="mode-bar">
+          <button class="mode-btn active" id="mode-original" onclick="setMode('original')">원본 자막</button>
+          <button class="mode-btn" id="mode-compare" onclick="setMode('compare')">원본 + 번역 비교</button>
+          <button class="mode-btn" id="mode-easy" onclick="setMode('easy')">쉬운 말만</button>
+        </div>
+
+        <!-- AI 변환 배너 -->
+        <div class="ai-banner">
+          <div class="ai-banner-row">
+            <div class="ai-icon-wrap">🤖</div>
+            <div class="ai-text">
+              <div class="ai-text-title">AI 초보자 모드 변환</div>
+              <div class="ai-text-sub">전문 용어를 일상 언어로 바꾸고<br/>광고·잡담 구간을 자동으로 제거해요</div>
+            </div>
+          </div>
+          <button class="btn-ai" id="ai-btn" onclick="runAI()">
+            <span>✨</span> AI로 초보자 모드 변환하기
+          </button>
+          <div class="ai-progress" id="ai-progress">
+            <div class="ai-progress-bar">
+              <div class="ai-progress-fill" id="ai-fill"></div>
+            </div>
+            <div class="ai-progress-label" id="ai-label">전문 용어 분석 중…</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SUBTITLE LIST -->
+      <div class="subtitle-list-wrap" id="sub-list">
+
+        <!-- 자막 1 -->
+        <div class="sub-item selected" onclick="toggleSub(this)">
+          <div class="sub-check">✓</div>
+          <div class="sub-content">
+            <div class="sub-time">14:32 <span class="action-tag">준비</span></div>
+            <div class="sub-original">자, 오늘은 코어 근육군을 집중적으로 타겟팅하는 루틴을 진행할 거예요. 먼저 요추 중립 자세를 잡아주세요.</div>
+            <div class="translate-arrow">↓ 쉬운 말로</div>
+            <div class="sub-translated">자, 오늘은 배와 허리 근육을 집중적으로 단련하는 루틴을 할 거예요. 먼저 허리를 곧게 펴고 편안하게 서 주세요.</div>
+          </div>
+        </div>
+
+        <!-- 자막 2 -->
+        <div class="sub-item selected" onclick="toggleSub(this)">
+          <div class="sub-check">✓</div>
+          <div class="sub-content">
+            <div class="sub-time">15:04 <span class="action-tag">동작</span></div>
+            <div class="sub-original">첫 번째 동작은 버피 테스트입니다. 전신 복합 운동으로 심폐 기능과 근지구력을 동시에 향상시킬 수 있어요. 10회 3세트 진행합니다.</div>
+            <div class="translate-arrow">↓ 쉬운 말로</div>
+            <div class="sub-translated">첫 번째 동작은 버피입니다. 서서 뛰다가 손을 바닥에 짚고 엎드렸다가 다시 일어나는 동작이에요. 심장과 근육을 함께 단련해줘요. 10번씩 3번 반복합니다.</div>
+          </div>
+        </div>
+
+        <!-- 자막 3 -->
+        <div class="sub-item selected" onclick="toggleSub(this)">
+          <div class="sub-check">✓</div>
+          <div class="sub-content">
+            <div class="sub-time">16:20 <span class="action-tag">동작</span></div>
+            <div class="sub-original">두 번째는 플랭크 홀드예요. 복횡근과 다열근을 동시에 활성화시켜 척추 안정화에 도움이 됩니다. 30초 유지해 주세요.</div>
+            <div class="translate-arrow">↓ 쉬운 말로</div>
+            <div class="sub-translated">두 번째는 플랭크 자세예요. 팔꿈치를 바닥에 대고 몸을 일자로 만들어 버티는 동작이에요. 배 안쪽과 허리 근육에 힘이 들어가요. 30초 동안 버텨주세요.</div>
+          </div>
+        </div>
+
+        <!-- 광고 구간 -->
+        <div class="ad-divider">
+          <span class="ad-label">🚫 광고 구간 (17:10 ~ 17:45) — 자동 제외됨</span>
+        </div>
+
+        <!-- 자막 4 -->
+        <div class="sub-item selected" onclick="toggleSub(this)">
+          <div class="sub-check">✓</div>
+          <div class="sub-content">
+            <div class="sub-time">17:46 <span class="action-tag">동작</span></div>
+            <div class="sub-original">세 번째 동작은 데드버그입니다. 팔과 다리를 교차하여 대각선 방향으로 뻗어주세요. 복압을 유지하는 게 포인트예요.</div>
+            <div class="translate-arrow">↓ 쉬운 말로</div>
+            <div class="sub-translated">세 번째 동작은 데드버그예요. 천장을 보고 누운 뒤, 오른팔과 왼쪽 다리를 동시에 뻗었다가 돌아오는 동작이에요. 배에 힘을 뺐다 넣지 않는 게 중요해요.</div>
+          </div>
+        </div>
+
+        <!-- 자막 5 (잡담 구간 - 제외 표시) -->
+        <div class="sub-item" onclick="toggleSub(this)" style="opacity:0.45;">
+          <div class="sub-check"></div>
+          <div class="sub-content">
+            <div class="sub-time">19:05 <span class="action-tag" style="background:#f3f0ed; color:var(--text3); border:1px dashed var(--border2);">잡담</span></div>
+            <div class="sub-original">아, 맞다 저 오늘 촬영 전에 아메리카노 두 잔 마셨어요. 여러분도 운동 전에 커피 한 잔 어때요? (웃음)</div>
+            <span class="sub-skip">✕ 운동 내용 아님 — 제외됨</span>
+          </div>
+        </div>
+
+        <!-- 자막 6 -->
+        <div class="sub-item selected" onclick="toggleSub(this)">
+          <div class="sub-check">✓</div>
+          <div class="sub-content">
+            <div class="sub-time">20:15 <span class="action-tag">휴식</span></div>
+            <div class="sub-original">자, 이제 30초 인터벌 레스트 타임입니다. 호흡을 고르고 다음 세트를 준비해 주세요.</div>
+            <div class="translate-arrow">↓ 쉬운 말로</div>
+            <div class="sub-translated">자, 30초 쉬어가겠습니다. 숨을 고르고 다음 동작을 준비해 주세요.</div>
+          </div>
+        </div>
+
+        <!-- 자막 7 -->
+        <div class="sub-item selected" onclick="toggleSub(this)">
+          <div class="sub-check">✓</div>
+          <div class="sub-content">
+            <div class="sub-time">21:00 <span class="action-tag">동작</span></div>
+            <div class="sub-original">네 번째, 힙 브리지입니다. 천장을 보고 누워 무릎을 세운 뒤 대둔근에 힘을 주며 골반을 들어올립니다. 상단에서 2초 정지.</div>
+            <div class="translate-arrow">↓ 쉬운 말로</div>
+            <div class="sub-translated">네 번째, 엉덩이 들어올리기예요. 천장을 보고 누워 무릎을 세운 뒤, 엉덩이에 힘을 꽉 주며 위로 들어올려요. 위에서 2초 멈춰요.</div>
+          </div>
+        </div>
+
+        <!-- 자막 8 -->
+        <div class="sub-item selected" onclick="toggleSub(this)">
+          <div class="sub-check">✓</div>
+          <div class="sub-content">
+            <div class="sub-time">23:30 <span class="action-tag">마무리</span></div>
+            <div class="sub-original">수고하셨어요! 쿨다운 스트레칭으로 마무리해 드릴게요. 긴장된 근육을 이완시켜 줄 거예요. 천천히 따라 해 주세요.</div>
+            <div class="translate-arrow">↓ 쉬운 말로</div>
+            <div class="sub-translated">고생하셨어요! 마무리 스트레칭을 같이 해볼게요. 쓴 근육들을 풀어줄 거예요. 천천히 따라 해 주세요.</div>
+          </div>
+        </div>
+
+      </div><!-- /subtitle-list-wrap -->
+
+      <!-- BOTTOM ACTION BAR -->
+      <div class="bottom-bar">
+        <div class="bottom-bar-row">
+          <span class="select-count"><strong id="sel-count">7</strong> / 8개 자막 선택됨</span>
+          <button class="select-all-btn" onclick="selectAll()">전체 선택</button>
+        </div>
+        <button class="btn-save" onclick="handleSave()">✔ 선택한 자막으로 루틴 만들기</button>
+      </div>
+
+    </div><!-- /screen -->
+  </div><!-- /phone-shell -->
+</div><!-- /phone-wrap -->
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- ANNOTATION -->
+<div class="annotation">
+  <h3>📐 화면 구성 설명</h3>
+  <div class="anno-row">
+    <div class="anno-dot"></div>
+    <div class="anno-text"><strong>보기 모드 토글</strong> — "원본 자막 / 원본+번역 비교 / 쉬운 말만" 3가지 모드로 전환. 기존 시스템의 Mode Bar 패턴 사용.</div>
+  </div>
+  <div class="anno-row">
+    <div class="anno-dot"></div>
+    <div class="anno-text"><strong>AI 변환 버튼</strong> — 탭하면 진행 바와 함께 전문 용어를 일상 언어로 일괄 변환. 초록색으로 번역문이 추가됩니다.</div>
+  </div>
+  <div class="anno-row">
+    <div class="anno-dot"></div>
+    <div class="anno-text"><strong>자막 선택 체크박스</strong> — 각 자막 줄을 탭하여 포함/제외 선택. 잡담·광고 구간은 AI가 자동으로 제외(흐릿하게) 표시합니다.</div>
+  </div>
+  <div class="anno-row">
+    <div class="anno-dot"></div>
+    <div class="anno-text"><strong>광고 구간 시각화</strong> — 점선 구분선으로 자동 제거된 광고 구간을 명시. 사용자에게 "광고가 빠졌어요"를 안심시킵니다.</div>
+  </div>
+  <div class="anno-row">
+    <div class="anno-dot"></div>
+    <div class="anno-text"><strong>하단 액션 바</strong> — 선택 개수 실시간 표시 + "루틴 만들기" 버튼으로 다음 단계 진입.</div>
+  </div>
+</div>
+
+<script>
+let isAiDone = false;
+let selectedCount = 7;
+
+/* ── MODE 전환 ── */
+function setMode(mode) {
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('mode-' + mode).classList.add('active');
+
+  const originals  = document.querySelectorAll('.sub-original');
+  const translateds = document.querySelectorAll('.sub-translated');
+  const arrows      = document.querySelectorAll('.translate-arrow');
+
+  if (mode === 'original') {
+    originals.forEach(el => { el.style.display = ''; });
+    translateds.forEach(el => el.classList.remove('show'));
+    arrows.forEach(el => el.classList.remove('show'));
+  } else if (mode === 'compare') {
+    originals.forEach(el => { el.style.display = ''; });
+    if (isAiDone) {
+      translateds.forEach(el => el.classList.add('show'));
+      arrows.forEach(el => el.classList.add('show'));
+    }
+  } else if (mode === 'easy') {
+    originals.forEach(el => { el.style.display = 'none'; });
+    if (isAiDone) {
+      translateds.forEach(el => el.classList.add('show'));
+    }
+    arrows.forEach(el => el.classList.remove('show'));
+  }
+}
+
+/* ── AI 변환 ── */
+const aiSteps = [
+  [15, '전문 용어 분석 중…'],
+  [35, '운동 용어 → 일상 언어 변환 중…'],
+  [58, '광고·잡담 구간 감지 중…'],
+  [78, '자막 문장 다듬는 중…'],
+  [95, '마지막으로 검토 중…'],
+  [100, '변환 완료! ✅'],
+];
+function runAI() {
+  if (isAiDone) { showToast('이미 변환되었어요!'); return; }
+  const btn = document.getElementById('ai-btn');
+  const prog = document.getElementById('ai-progress');
+  const fill = document.getElementById('ai-fill');
+  const label = document.getElementById('ai-label');
+
+  btn.disabled = true;
+  btn.innerHTML = '<span>⏳</span> 변환 중…';
+  prog.classList.add('show');
+
+  let step = 0;
+  const interval = setInterval(() => {
+    if (step >= aiSteps.length) {
+      clearInterval(interval);
+      isAiDone = true;
+      btn.innerHTML = '✅ 변환 완료';
+      btn.style.background = 'var(--green)';
+      // 번역 텍스트 표시
+      document.querySelectorAll('.sub-translated').forEach(el => el.classList.add('show'));
+      document.querySelectorAll('.translate-arrow').forEach(el => el.classList.add('show'));
+      // 비교 모드로 자동 전환
+      document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById('mode-compare').classList.add('active');
+      showToast('✨ AI 변환 완료! 초록색이 쉬운 버전이에요');
+      return;
+    }
+    const [pct, lbl] = aiSteps[step++];
+    fill.style.width = pct + '%';
+    label.textContent = lbl;
+  }, 500);
+}
+
+/* ── 자막 토글 ── */
+function toggleSub(el) {
+  el.classList.toggle('selected');
+  selectedCount = document.querySelectorAll('.sub-item.selected').length;
+  document.getElementById('sel-count').textContent = selectedCount;
+}
+
+/* ── 전체 선택 ── */
+function selectAll() {
+  const items = document.querySelectorAll('.sub-item');
+  const allSelected = [...items].every(i => i.classList.contains('selected'));
+  items.forEach(i => {
+    if (allSelected) i.classList.remove('selected');
+    else i.classList.add('selected');
+  });
+  selectedCount = document.querySelectorAll('.sub-item.selected').length;
+  document.getElementById('sel-count').textContent = selectedCount;
+}
+
+/* ── 저장 ── */
+function handleSave() {
+  showToast(`🎉 ${selectedCount}개 자막으로 루틴이 만들어졌어요!`);
+}
+
+/* ── Toast ── */
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2400);
+}
+</script>
+</body>
+</html>

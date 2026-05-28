@@ -29,9 +29,12 @@ function MyPageScreen({ user, onLogout, fitnessLevel, onSetLevel, settingsToggle
       subtitle={user?.email ? `${user.email} 님, 환영합니다!` : '이번 달 12회 운동했어요 🎉'}
     >
       {user?.email && (
-        <div className="section" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div className="section-title">로그인된 계정</div>
-          <button type="button" className="link-btn" onClick={onLogout}>
+        <div className="section mypage-account-section">
+          <div>
+            <div className="section-title">로그인된 계정</div>
+            <div className="mypage-account-email">{user.email}</div>
+          </div>
+          <button type="button" className="logout-btn" onClick={onLogout}>
             로그아웃
           </button>
         </div>
