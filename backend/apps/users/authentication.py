@@ -1,7 +1,13 @@
 import os
+import logging
+from pathlib import Path
 import firebase_admin
 from firebase_admin import auth as firebase_auth, credentials
+from decouple import config
+from django.conf import settings
 from rest_framework import authentication, exceptions
+
+logger = logging.getLogger(__name__)
 
 
 class FirebaseUser:
@@ -32,6 +38,7 @@ class FirebaseAuthentication(authentication.BaseAuthentication):
             app = self.get_firebase_app()
             decoded_token = firebase_auth.verify_id_token(token, app=app)
         except Exception as exc:
+            logger.exception('Firebase token verification failed.')
             raise exceptions.AuthenticationFailed('Firebase token verification failed.') from exc
 
         user = FirebaseUser(decoded_token)
@@ -42,9 +49,12 @@ class FirebaseAuthentication(authentication.BaseAuthentication):
 
     def get_firebase_app(self):
         if not firebase_admin._apps:
-            service_account = os.getenv('FIREBASE_SERVICE_ACCOUNT_PATH')
+            service_account = config('FIREBASE_SERVICE_ACCOUNT_PATH', default=os.getenv('FIREBASE_SERVICE_ACCOUNT_PATH', ''))
             if service_account:
-                cred = credentials.Certificate(service_account)
+                service_account_path = Path(service_account)
+                if not service_account_path.is_absolute():
+                    service_account_path = settings.BASE_DIR / service_account_path
+                cred = credentials.Certificate(str(service_account_path))
             else:
                 cred = credentials.ApplicationDefault()
             firebase_admin.initialize_app(cred)

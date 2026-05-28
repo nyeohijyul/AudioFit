@@ -22,6 +22,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import './AudioFitWireframe.css';
 import ScreenNav from './ScreenNav';
 import TabBar from './TabBar';
+import { useAuth } from '../contexts/AuthContext';
 import {
   DONUT_RADIUS,
   EXERCISES,
@@ -58,6 +59,7 @@ function calcDonutOffset(timerSec) {
 }
 
 function AudioFitWireframe({ user, onLogout }) {
+  const { token } = useAuth();
   const [activeScreen, setActiveScreen] = useState('home');
 
   const [ytLink, setYtLink] = useState('');
@@ -121,6 +123,7 @@ function AudioFitWireframe({ user, onLogout }) {
             endVal={endVal}
             translateOn={translateOn}
             onToggleTranslate={handleToggleTranslate}
+            onSaveRoutine={handleSaveRoutine}
           />
         );
       case 'player':
@@ -292,13 +295,46 @@ function AudioFitWireframe({ user, onLogout }) {
     setShowYoutubeModal(true);
   }, [ytLink]);
 
-  const handleConfirmAddClip = useCallback((payload) => {
+  const handleConfirmAddClip = useCallback(async (payload) => {
     const id = payload.id || `clip-${clipIdRef.current++}`;
     const label = payload.label || '새 영상 클립';
     const meta = payload.meta || payload.duration || '전체 구간';
-    setClips((prev) => [...prev, { id, label, meta, url: payload.url }]);
+    const url = payload.url;
+    const youtube_url = payload.youtube_url;
+
+    // 먼저 clip을 추가 (자막은 로딩 중)
+    const newClip = { id, label, meta, url, subtitles: [] };
+    setClips((prev) => [...prev, newClip]);
     setShowYoutubeModal(false);
-  }, []);
+
+    // youtube_url이 있으면 자막 API 호출
+    if (youtube_url && token) {
+      try {
+        const response = await fetch('http://localhost:8000/api/v1/clips/transcript/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({ youtube_url }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          // clip의 subtitles 업데이트
+          setClips((prev) =>
+            prev.map((c) =>
+              c.id === id ? { ...c, subtitles: data.subtitles || [] } : c
+            )
+          );
+        } else {
+          console.error('자막 로드 실패:', response.status);
+        }
+      } catch (error) {
+        console.error('자막 API 호출 오류:', error);
+      }
+    }
+  }, [token]);
 
   const handleDeleteClip = useCallback((id) => {
     setClips((prev) => prev.filter((c) => c.id !== id));
@@ -309,10 +345,37 @@ function AudioFitWireframe({ user, onLogout }) {
     setShowSubtitleModal(true);
   }, []);
 
-  const handleSaveSubtitles = useCallback((subtitles) => {
+  const handleSaveSubtitles = useCallback(async (subtitles) => {
     setClips((prev) => prev.map((c) => (c.id === selectedClipId ? { ...c, subtitles } : c)));
     setShowSubtitleModal(false);
-  }, [selectedClipId]);
+
+    const clip = clips.find((c) => c.id === selectedClipId);
+    if (clip && token) {
+      try {
+        const videoIdMatch = clip.url ? clip.url.match(/(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/) : null;
+        const videoId = videoIdMatch ? videoIdMatch[1] : '';
+
+        if (videoId) {
+          await fetch('http://localhost:8000/api/v1/clips/save-user-clip/', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              video_id: videoId,
+              subtitles: subtitles,
+              youtube_url: clip.url,
+              title: clip.label,
+              duration: clip.meta,
+            }),
+          });
+        }
+      } catch (error) {
+        console.error('자막 서버 저장 중 오류 발생:', error);
+      }
+    }
+  }, [selectedClipId, clips, token]);
 
   /**
    * 번역 모드 토글 반전.
@@ -321,17 +384,101 @@ function AudioFitWireframe({ user, onLogout }) {
     setTranslateOn((v) => !v);
   }, []);
 
+  useEffect(() => {
+    async function fetchRoutines() {
+      if (!token) return;
+      try {
+        const response = await fetch('http://localhost:8000/api/v1/routines/', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+        if (response.ok) {
+          const data = await response.json();
+          const mappedRoutines = data.map((r) => ({
+            id: String(r.id),
+            thumb: '🧘',
+            name: r.name,
+            meta: `${r.clips?.length || 0}개 영상 루틴 · 초보자`,
+            clips: r.clips,
+          }));
+          setRoutines(mappedRoutines);
+        }
+      } catch (error) {
+        console.error('루틴 로드 실패:', error);
+      }
+    }
+    fetchRoutines();
+  }, [token]);
+
+  const handleSaveRoutine = useCallback(async (name) => {
+    const id = `routine-${Date.now()}`;
+    const newRoutine = {
+      id,
+      thumb: '🧘',
+      name,
+      meta: `${clips.length}개 영상 루틴 · 초보자`,
+      clips: clips,
+    };
+    setRoutines((prev) => [newRoutine, ...prev]);
+    showScreen('library');
+
+    if (token) {
+      try {
+        const response = await fetch('http://localhost:8000/api/v1/routines/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            name,
+            clips,
+          }),
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setRoutines((prev) =>
+            prev.map((r) =>
+              r.id === id
+                ? {
+                    ...r,
+                    id: String(data.id),
+                  }
+                : r
+            )
+          );
+        }
+      } catch (error) {
+        console.error('루틴 서버 저장 실패:', error);
+      }
+    }
+  }, [clips, token, showScreen]);
+
   /**
    * 보관함 루틴 삭제 + 페이드 아웃 (원본 deleteRoutine).
    * @param {string} id
    */
-  const handleDeleteRoutine = useCallback((id) => {
+  const handleDeleteRoutine = useCallback(async (id) => {
     setDeletingId(id);
     setTimeout(() => {
       setRoutines((prev) => prev.filter((r) => r.id !== id));
       setDeletingId(null);
     }, 200);
-  }, []);
+
+    if (token && !String(id).startsWith('routine-')) {
+      try {
+        await fetch(`http://localhost:8000/api/v1/routines/${id}/`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+      } catch (error) {
+        console.error('루틴 서버 삭제 실패:', error);
+      }
+    }
+  }, [token]);
 
   /**
    * 체력 수준 버튼 선택 (원본 setLevel).

@@ -9,6 +9,7 @@ from django.conf.urls.static import static
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/v1/auth/', include('apps.users.urls')),
+    path('api/v1/', include('apps.clips.urls')),
     path('api-auth/', include('rest_framework.urls')),
     # path('api/v1/routines/', include('apps.routines.urls')),
     # path('api/v1/music/', include('apps.music.urls')),

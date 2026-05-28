@@ -13,6 +13,7 @@
  *    react-hook-form·Zod 검증, YouTube oEmbed API 연동, 구간 미리보기 플레이어 추가.
  */
 
+import { useState } from 'react';
 import ScreenLayout from '../ScreenLayout';
 
 function formatMeta(meta) {
@@ -43,7 +44,9 @@ function NewRoutineScreen({
   onAddClip,
   onDeleteClip,
   onOpenSubtitleEditor,
+  onSaveRoutine,
 }) {
+  const [routineName, setRoutineName] = useState('');
   const hasClips = clips.length > 0;
 
   const renderClipList = () => (
@@ -107,8 +110,24 @@ function NewRoutineScreen({
           <div className="step-num">3</div>
           루틴 이름 짓기
         </div>
-        <input className="input-field" type="text" placeholder="예: 아침 10분 코어 루틴" />
-        <button type="button" className="btn-wine">
+        <input 
+          className="input-field" 
+          type="text" 
+          placeholder="예: 아침 10분 코어 루틴" 
+          value={routineName}
+          onChange={(e) => setRoutineName(e.target.value)}
+        />
+        <button 
+          type="button" 
+          className="btn-wine"
+          onClick={() => {
+            if (routineName.trim() && onSaveRoutine) {
+              onSaveRoutine(routineName.trim());
+              setRoutineName('');
+            }
+          }}
+          disabled={!routineName.trim() || !hasClips}
+        >
           ✔ 루틴 저장하고 보관함에 추가
         </button>
       </div>
