@@ -1,3 +1,29 @@
+# Frontend (Node.js)
+frontend/node_modules
+frontend/dist
+frontend/dist-ssr
+frontend/*.local
+
+# Backend (Python/Django)
+backend/venv/
+backend/.venv/
+backend/env/
+backend/__pycache__/
+backend/*.py[cod]
+backend/*$py.class
+backend/db.sqlite3
+backend/media/
+backend/staticfiles/
+backend/.env
+backend/.env.local
+backend/pip-log.txt
+backend/pip-delete-this-directory.txt
+backend/.coverage
+backend/htmlcov/
+backend/*.egg-info/
+backend/dist/
+backend/build/
+
 # Logs
 logs
 *.log
@@ -6,11 +32,6 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
-
-node_modules
-dist
-dist-ssr
-*.local
 
 # Editor directories and files
 .vscode/*
@@ -22,3 +43,15 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+Thumbs.db
+.DS_Store
+
