@@ -8,10 +8,10 @@ from django.conf.urls.static import static
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/', include('rest_framework.urls')),
-    # path('api/auth/', include('apps.users.urls')),
-    # path('api/routines/', include('apps.routines.urls')),
-    # path('api/music/', include('apps.music.urls')),
+    path('api/v1/auth/', include('apps.users.urls')),
+    path('api-auth/', include('rest_framework.urls')),
+    # path('api/v1/routines/', include('apps.routines.urls')),
+    # path('api/v1/music/', include('apps.music.urls')),
 ]
 
 if settings.DEBUG:

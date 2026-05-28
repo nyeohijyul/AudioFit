@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import AudioFitWireframe from './components/AudioFitWireframe';
 import SplashScreen from './components/SplashScreen';
+import LoginScreen from './components/screens/LoginScreen';
 
 /** 스플래시 표시 시간(ms) */
 const SPLASH_VISIBLE_MS = 2000;
@@ -9,14 +11,25 @@ const SPLASH_VISIBLE_MS = 2000;
 const SPLASH_EXIT_MS = 450;
 
 /**
- * 앱 루트: 스플래시 후 메인 와이어프레임으로 전환합니다.
+ * 인증 상태에 따라 로그인 화면 또는 메인 앱을 렌더링합니다.
  */
+function AppContent() {
+  const { user, isLoading, logout } = useAuth();
+
+  if (isLoading) {
+    return <div className="auth-loading">인증 상태를 확인하는 중입니다...</div>;
+  }
+
+  if (!user) {
+    return <LoginScreen />;
+  }
+
+  return <AudioFitWireframe user={user} onLogout={logout} />;
+}
+
 function App() {
   const [phase, setPhase] = useState('splash');
 
-  /**
-   * 스플래시 표시 → 퇴장 애니메이션 → 메인 앱 순으로 phase를 전환합니다.
-   */
   useEffect(() => {
     const exitTimer = setTimeout(() => setPhase('exiting'), SPLASH_VISIBLE_MS);
     const appTimer = setTimeout(() => setPhase('app'), SPLASH_VISIBLE_MS + SPLASH_EXIT_MS);
@@ -27,16 +40,13 @@ function App() {
     };
   }, []);
 
-  /**
-   * 스플래시 단계인지 여부를 반환합니다.
-   */
   const isSplashVisible = phase === 'splash' || phase === 'exiting';
 
   return (
-    <>
+    <AuthProvider>
       {isSplashVisible && <SplashScreen exiting={phase === 'exiting'} />}
-      {phase === 'app' && <AudioFitWireframe />}
-    </>
+      {phase === 'app' && <AppContent />}
+    </AuthProvider>
   );
 }
 

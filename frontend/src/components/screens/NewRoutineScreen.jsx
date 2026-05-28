@@ -14,33 +14,56 @@
  */
 
 import ScreenLayout from '../ScreenLayout';
-import Toggle from '../Toggle';
+
+function formatMeta(meta) {
+  if (meta == null) return '';
+  if (typeof meta === 'number') {
+    const m = Math.floor(meta / 60);
+    const s = meta % 60;
+    return `${m}분 ${s}초`;
+  }
+  if (typeof meta === 'string') {
+    // already human readable
+    if (meta.includes('분') || meta.includes('초')) return meta;
+    const parts = meta.split(':').map((p) => Number(p));
+    if (parts.length === 2 && !Number.isNaN(parts[0]) && !Number.isNaN(parts[1])) {
+      return `${parts[0]}분 ${parts[1]}초`;
+    }
+    if (parts.length === 3 && parts.every((n) => !Number.isNaN(n))) {
+      const totalMin = parts[0] * 60 + parts[1];
+      return `${totalMin}분 ${parts[2]}초`;
+    }
+    return meta;
+  }
+  return String(meta);
+}
 
 function NewRoutineScreen({
-  ytLink,
-  setYtLink,
   clips,
   onAddClip,
-  segSlider,
-  setSegSlider,
-  endVal,
-  translateOn,
-  onToggleTranslate,
+  onDeleteClip,
+  onOpenSubtitleEditor,
 }) {
-  /**
-   * 슬라이더 값 변경 시 부모 state를 갱신합니다.
-   * @param {React.ChangeEvent<HTMLInputElement>} e
-   */
-  const handleSliderChange = (e) => {
-    setSegSlider(Number(e.target.value));
-  };
+  const hasClips = clips.length > 0;
 
-  /**
-   * 슬라이더 트랙에 와인색 채움 비율을 인라인 스타일로 적용합니다.
-   */
-  const sliderStyle = {
-    background: `linear-gradient(to right, var(--wine) 0%, var(--wine) ${segSlider}%, var(--surface2) ${segSlider}%)`,
-  };
+  const renderClipList = () => (
+    <div className="clip-list">
+      {clips.map((clip) => (
+        <div key={clip.id} className="clip-item">
+          <div className="clip-dot" />
+          <button
+            type="button"
+            className="clip-main"
+            onClick={() => onOpenSubtitleEditor && onOpenSubtitleEditor(clip.id)}
+          >
+            <span>{clip.label}</span>
+            <span className="clip-meta">{formatMeta(clip.meta)}</span>
+          </button>
+          <button className="clip-delete" onClick={() => onDeleteClip && onDeleteClip(clip.id)}>삭제</button>
+        </div>
+      ))}
+    </div>
+  );
 
   return (
     <ScreenLayout
@@ -51,24 +74,9 @@ function NewRoutineScreen({
       <div className="section">
         <div className="section-title-numbered">
           <div className="step-num">1</div>
-          유튜브 링크 입력
+          영상 리스트 만들기
         </div>
-        <input
-          className="input-field"
-          type="text"
-          value={ytLink}
-          onChange={(e) => setYtLink(e.target.value)}
-          placeholder="youtube.com/watch?v=..."
-        />
-        <div id="clip-list">
-          {clips.map((clip) => (
-            <div key={clip.id} className="clip-item">
-              <div className="clip-dot" />
-              {clip.label}
-              <span className="clip-meta">{clip.meta}</span>
-            </div>
-          ))}
-        </div>
+        {renderClipList()}
         <button type="button" className="btn-outline" onClick={onAddClip}>
           + 영상 추가하기
         </button>
@@ -77,52 +85,26 @@ function NewRoutineScreen({
       <div className="section">
         <div className="section-title-numbered">
           <div className="step-num">2</div>
-          구간 선택
+          자막 편집하기
         </div>
-        <div className="time-inputs">
-          <div className="time-box">
-            ⏱ 시작 &nbsp;<strong>00:00</strong>
+        {hasClips ? (
+          renderClipList()
+        ) : (
+          <div className="routine-empty-state">
+            <div className="routine-empty-state__title">먼저 영상을 추가해 주세요</div>
+            <div className="routine-empty-state__desc">
+              자막 편집은 추가된 영상의 분석 결과를 바탕으로 진행돼요.
+            </div>
+            <button type="button" className="routine-empty-state__button" onClick={onAddClip}>
+              영상 추가하기
+            </button>
           </div>
-          <div className="time-box">
-            🏁 종료 &nbsp;<strong>{endVal}</strong>
-          </div>
-        </div>
-        <input
-          className="real-range"
-          type="range"
-          min="0"
-          max="60"
-          value={segSlider}
-          style={sliderStyle}
-          onChange={handleSliderChange}
-        />
-        <div className="range-labels">
-          <span>0:00</span>
-          <span>영상 전체 길이 60분</span>
-        </div>
+        )}
       </div>
 
       <div className="section">
         <div className="section-title-numbered">
           <div className="step-num">3</div>
-          번역 모드
-        </div>
-        <div className="toggle-row">
-          <div>
-            <div className="toggle-label">초보자 언어로 바꾸기</div>
-          </div>
-          <Toggle isOn={translateOn} onToggle={onToggleTranslate} />
-        </div>
-        <div className="translate-example">
-          <strong>버피 →</strong> &quot;서서 뛰다가 바닥에 손 짚고 엎드렸다 일어나기&quot;
-          <br />
-          <strong>플랭크 →</strong> &quot;팔꿈치를 바닥에 대고 몸을 일자로 버티기&quot;
-        </div>
-      </div>
-
-      <div className="section">
-        <div className="section-title-numbered">
-          <div className="step-num">4</div>
           루틴 이름 짓기
         </div>
         <input className="input-field" type="text" placeholder="예: 아침 10분 코어 루틴" />
