@@ -3,11 +3,8 @@ frontend/node_modules
 frontend/dist
 frontend/dist-ssr
 frontend/*.local
-<<<<<<< HEAD
 frontend/.env
 frontend/.env.local
-=======
->>>>>>> 67ce7cbdef500629fbeaa931914c023792cb0d82
 
 # Backend (Python/Django)
 backend/venv/
