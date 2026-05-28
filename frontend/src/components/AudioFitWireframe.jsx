@@ -67,8 +67,9 @@ function AudioFitWireframe({ user, onLogout }) {
   const [segSlider, setSegSlider] = useState(60);
   const [translateOn, setTranslateOn] = useState(true);
 
-  const [curEx, setCurEx] = useState(2);
-  const [timerSec, setTimerSec] = useState(24);
+  const [currentRoutine, setCurrentRoutine] = useState(null);
+  const [curEx, setCurEx] = useState(0);
+  const [timerSec, setTimerSec] = useState(30);
   const [timerRunning, setTimerRunning] = useState(false);
   const [playBtnIcon, setPlayBtnIcon] = useState('⏸');
   const [speed, setSpeed] = useState('1×');
@@ -86,8 +87,75 @@ function AudioFitWireframe({ user, onLogout }) {
   const timerIntervalRef = useRef(null);
   const clipIdRef = useRef(1);
 
+  // Helper to map routine subtitles to player exercises dynamically
+  const activeExercises = useMemo(() => {
+    if (!currentRoutine || !currentRoutine.clips || currentRoutine.clips.length === 0) {
+      return EXERCISES;
+    }
+
+    const exercises = [];
+    currentRoutine.clips.forEach((clip) => {
+      const grouped = {};
+      const orderedNames = [];
+
+      (clip.subtitles || []).forEach((sub) => {
+        if (!sub.selected) return;
+        const exName = sub.exercise || '준비/기타';
+        if (!grouped[exName]) {
+          grouped[exName] = [];
+          orderedNames.push(exName);
+        }
+        grouped[exName].push(sub);
+      });
+
+      orderedNames.forEach((exName, idx) => {
+        const items = grouped[exName];
+        const desc = items.map((sub) => sub.translated || sub.original).join(' ');
+
+        const startTimes = items.map((sub) => {
+          if (typeof sub.start === 'number') return sub.start;
+          const parts = (sub.time || '00:00').split(':').map(Number);
+          return (parts[0] || 0) * 60 + (parts[1] || 0);
+        });
+        const minStart = Math.min(...startTimes);
+
+        let maxEnd = Math.max(...items.map((sub) => {
+          if (typeof sub.start === 'number') return sub.start + (sub.duration || 5);
+          const parts = (sub.time || '00:00').split(':').map(Number);
+          return (parts[0] || 0) * 60 + (parts[1] || 0) + 5;
+        }));
+
+        if (idx < orderedNames.length - 1) {
+          const nextExName = orderedNames[idx + 1];
+          const nextItems = grouped[nextExName];
+          const nextStartTimes = nextItems.map((sub) => {
+            if (typeof sub.start === 'number') return sub.start;
+            const parts = (sub.time || '00:00').split(':').map(Number);
+            return (parts[0] || 0) * 60 + (parts[1] || 0);
+          });
+          maxEnd = Math.min(...nextStartTimes);
+        }
+
+        const durationSec = Math.max(5, Math.round(maxEnd - minStart));
+
+        exercises.push({
+          name: exName,
+          desc: desc || '이 동작에 대한 설명이 없습니다.',
+          duration: durationSec,
+          next: orderedNames[idx + 1] || '마무리/완료!',
+        });
+      });
+    });
+
+    return exercises.length > 0 ? exercises : EXERCISES;
+  }, [currentRoutine]);
+
   const endVal = useMemo(() => formatEndTime(segSlider), [segSlider]);
-  const donutOffset = useMemo(() => calcDonutOffset(timerSec), [timerSec]);
+  const donutOffset = useMemo(() => {
+    const total = activeExercises[curEx]?.duration || 30;
+    const circ = 2 * Math.PI * DONUT_RADIUS;
+    return circ * (1 - timerSec / total);
+  }, [timerSec, curEx, activeExercises]);
 
   const [showYoutubeModal, setShowYoutubeModal] = useState(false);
   const [showSubtitleModal, setShowSubtitleModal] = useState(false);
@@ -140,6 +208,8 @@ function AudioFitWireframe({ user, onLogout }) {
             onSeekForward={handleSeekForward}
             onSeekBack={handleSeekBack}
             onSetSpeed={handleSetSpeed}
+            routineName={currentRoutine?.name}
+            exercises={activeExercises}
           />
         );
       case 'library':
@@ -149,6 +219,7 @@ function AudioFitWireframe({ user, onLogout }) {
             routines={routines}
             deletingId={deletingId}
             onDeleteRoutine={handleDeleteRoutine}
+            onPlayRoutine={handlePlayRoutine}
           />
         );
       case 'mypage':
@@ -213,21 +284,23 @@ function AudioFitWireframe({ user, onLogout }) {
   useEffect(() => {
     if (timerSec === 0 && timerRunning) {
       setCurEx((idx) => {
-        if (idx < EXERCISES.length - 1) {
+        if (idx < activeExercises.length - 1) {
           return idx + 1;
         }
         return idx;
       });
-      setTimerSec(TOTAL_SEC);
+      const nextDuration = activeExercises[curEx + 1]?.duration || 30;
+      setTimerSec(nextDuration);
     }
-  }, [timerSec, timerRunning]);
+  }, [timerSec, timerRunning, activeExercises, curEx]);
 
   /**
    * 동작 인덱스가 바뀌면 타이머를 초기화합니다 (원본 renderExercise).
    */
   useEffect(() => {
-    setTimerSec(TOTAL_SEC);
-  }, [curEx]);
+    const duration = activeExercises[curEx]?.duration || 30;
+    setTimerSec(duration);
+  }, [curEx, activeExercises]);
 
   /**
    * 언마운트 시 interval 정리.
@@ -255,8 +328,8 @@ function AudioFitWireframe({ user, onLogout }) {
    * 다음 동작 (원본 nextExercise).
    */
   const handleNextExercise = useCallback(() => {
-    setCurEx((idx) => (idx < EXERCISES.length - 1 ? idx + 1 : idx));
-  }, []);
+    setCurEx((idx) => (idx < activeExercises.length - 1 ? idx + 1 : idx));
+  }, [activeExercises.length]);
 
   /**
    * 이전 동작 (원본 prevExercise).
@@ -276,8 +349,17 @@ function AudioFitWireframe({ user, onLogout }) {
    * 10초 뒤로 (원본 seekBack).
    */
   const handleSeekBack = useCallback(() => {
-    setTimerSec((s) => Math.min(TOTAL_SEC, s + 10));
-  }, []);
+    const total = activeExercises[curEx]?.duration || 30;
+    setTimerSec((s) => Math.min(total, s + 10));
+  }, [curEx, activeExercises]);
+
+  const handlePlayRoutine = useCallback((routine) => {
+    setCurrentRoutine(routine);
+    setCurEx(0);
+    const firstDuration = routine.clips?.[0]?.subtitles?.filter(s => s.selected)?.length > 0 ? 30 : 30; // computed on state change
+    setTimerSec(30);
+    showScreen('player');
+  }, [showScreen]);
 
   /**
    * 배속 칩 선택 (원본 setSpeed).

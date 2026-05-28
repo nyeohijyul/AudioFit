@@ -13,7 +13,7 @@
  */
 
 import ScreenLayout from '../ScreenLayout';
-import { EXERCISES } from '../constants';
+import { EXERCISES as DEFAULT_EXERCISES } from '../constants';
 
 const SPEED_OPTIONS = ['0.75×', '1×', '1.25×', '1.5×'];
 
@@ -29,15 +29,17 @@ function PlayerScreen({
   onSeekForward,
   onSeekBack,
   onSetSpeed,
+  routineName,
+  exercises = DEFAULT_EXERCISES,
 }) {
-  const exercise = EXERCISES[curEx];
+  const exercise = exercises[curEx] || { name: '완료', desc: '모든 운동이 끝났습니다!', next: '없음', duration: 30 };
 
   const playerHeader = (
     <div className="header-row screen-header__row">
       <div className="screen-header__titles">
-        <h2>아침 5분 코어 깨우기</h2>
+        <h2>{routineName || '아침 5분 코어 깨우기'}</h2>
         <p>
-          {curEx + 1} / {EXERCISES.length}번째 동작
+          {curEx + 1} / {exercises.length}번째 동작
         </p>
       </div>
       <span className="header-icon">🔊</span>
@@ -48,11 +50,11 @@ function PlayerScreen({
     <ScreenLayout screenId="screen-player" headerExtra={playerHeader}>
       <div className="progress-bar-wrap pt">
         <div className="progress-bar">
-          <div className="progress-fill" />
+          <div className="progress-fill" style={{ width: `${(timerSec / (exercise.duration || 30)) * 100}%` }} />
         </div>
         <div className="progress-labels">
-          <span>6:12</span>
-          <span>15:00</span>
+          <span>{timerSec}초 남음</span>
+          <span>{exercise.duration || 30}초 전체</span>
         </div>
       </div>
 

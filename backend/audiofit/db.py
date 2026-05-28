@@ -1,6 +1,14 @@
 import os
+from pathlib import Path
 from pymongo import MongoClient
-from decouple import config
+from decouple import Config, RepositoryEnv
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+env_path = BASE_DIR / '.env'
+if env_path.exists():
+    config = Config(RepositoryEnv(env_path))
+else:
+    from decouple import config
 
 # 1. MongoDB Connection Initialization
 MONGO_URI = config('MONGO_URI', default='')

@@ -28,3 +28,18 @@ class Clip(models.Model):
     def __str__(self):
         return f"{self.title or 'Untitled'} ({self.video_id})"
 
+
+class Routine(models.Model):
+    """사용자별 운동 루틴 데이터 모델"""
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    name = models.CharField(max_length=255)
+    clips = models.JSONField(default=list, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.name} ({self.user.username})"
+

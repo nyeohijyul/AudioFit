@@ -1,4 +1,4 @@
-from rest_framework import viewsets, status
+from rest_framework import viewsets, status, exceptions
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
@@ -6,11 +6,26 @@ from django.shortcuts import get_object_or_404
 
 from apps.utils.youtube import extract_video_id, fetch_youtube_transcript, fetch_youtube_metadata
 from apps.utils.gemini_ai import simplify_subtitles as simplify_subtitles_with_ai
-from bson import ObjectId
-from datetime import datetime
-from audiofit.db import routines_collection
-from .models import Clip
+from .models import Clip, Routine
 from .serializers import ClipSerializer
+
+
+def get_firebase_uid(request):
+    uid = getattr(request.user, 'uid', None) or getattr(request.user, 'username', None)
+    if not uid or uid == 'AnonymousUser':
+        return None
+    return uid
+
+
+def get_django_user(request):
+    from django.contrib.auth.models import User as DjangoUser
+
+    firebase_uid = get_firebase_uid(request)
+    if not firebase_uid:
+        raise exceptions.AuthenticationFailed('유효하지 않은 사용자입니다.')
+
+    django_user, _ = DjangoUser.objects.get_or_create(username=firebase_uid)
+    return django_user
 
 
 class ClipViewSet(viewsets.ModelViewSet):
@@ -21,7 +36,8 @@ class ClipViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         # 현재 사용자의 클립만 조회
-        return Clip.objects.filter(user=self.request.user)
+        django_user = get_django_user(self.request)
+        return Clip.objects.filter(user=django_user)
     
     @action(detail=False, methods=['post'])
     def transcript(self, request):
@@ -114,9 +130,11 @@ class ClipViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+        django_user = get_django_user(request)
+
         # 현재 사용자에게 매핑된 해당 비디오 클립 찾거나 생성
         clip, created = Clip.objects.get_or_create(
-            user=request.user,
+            user=django_user,
             video_id=video_id,
             defaults={
                 'youtube_url': youtube_url,
@@ -140,70 +158,45 @@ class ClipViewSet(viewsets.ModelViewSet):
 
 
 class RoutineViewSet(viewsets.ViewSet):
-    """MongoDB를 사용하는 사용자 운동 루틴 관리 API"""
+    """사용자 운동 루틴 관리 API"""
     permission_classes = [IsAuthenticated]
 
     def list(self, request):
-        if routines_collection is None:
-            return Response({'error': 'MongoDB가 연결되어 있지 않습니다.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        
-        firebase_uid = request.user.uid
-        cursor = routines_collection.find({'user_id': firebase_uid}).sort('created_at', -1)
-        
-        routines = []
-        for doc in cursor:
-            routines.append({
-                'id': str(doc['_id']),
-                'name': doc.get('name', ''),
-                'clips': doc.get('clips', []),
-                'created_at': doc.get('created_at', '').isoformat() if isinstance(doc.get('created_at'), datetime) else doc.get('created_at')
-            })
-            
-        return Response(routines, status=status.HTTP_200_OK)
+        django_user = get_django_user(request)
+        routines = Routine.objects.filter(user=django_user)
+        data = [
+            {
+                'id': str(routine.id),
+                'name': routine.name,
+                'clips': routine.clips,
+                'created_at': routine.created_at.isoformat() if routine.created_at else None,
+            }
+            for routine in routines
+        ]
+        return Response(data, status=status.HTTP_200_OK)
 
     def create(self, request):
-        if routines_collection is None:
-            return Response({'error': 'MongoDB가 연결되어 있지 않습니다.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-            
-        firebase_uid = request.user.uid
+        django_user = get_django_user(request)
         name = request.data.get('name')
         clips = request.data.get('clips', [])
 
         if not name:
             return Response({'error': '루틴 이름은 필수 항목입니다.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        doc = {
-            'user_id': firebase_uid,
-            'name': name,
-            'clips': clips,
-            'created_at': datetime.utcnow()
-        }
-        
-        result = routines_collection.insert_one(doc)
-        
+        routine = Routine.objects.create(user=django_user, name=name, clips=clips)
+
         created_routine = {
-            'id': str(result.inserted_id),
-            'name': name,
-            'clips': clips,
-            'created_at': doc['created_at'].isoformat()
+            'id': str(routine.id),
+            'name': routine.name,
+            'clips': routine.clips,
+            'created_at': routine.created_at.isoformat() if routine.created_at else None,
         }
-        
         return Response(created_routine, status=status.HTTP_201_CREATED)
 
     def destroy(self, request, pk=None):
-        if routines_collection is None:
-            return Response({'error': 'MongoDB가 연결되어 있지 않습니다.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-            
-        firebase_uid = request.user.uid
-        try:
-            obj_id = ObjectId(pk)
-        except Exception:
-            return Response({'error': '유효하지 않은 루틴 ID입니다.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        result = routines_collection.delete_one({'_id': obj_id, 'user_id': firebase_uid})
-        if result.deleted_count == 0:
-            return Response({'error': '루틴을 찾을 수 없거나 권한이 없습니다.'}, status=status.HTTP_404_NOT_FOUND)
-            
+        django_user = get_django_user(request)
+        routine = get_object_or_404(Routine, pk=pk, user=django_user)
+        routine.delete()
         return Response({'message': '루틴이 성공적으로 삭제되었습니다.'}, status=status.HTTP_204_NO_CONTENT)
 
 # from rest_framework import viewsets, status

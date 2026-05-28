@@ -14,7 +14,7 @@
 
 import ScreenLayout from '../ScreenLayout';
 
-function LibraryScreen({ onNavigate, routines, deletingId, onDeleteRoutine }) {
+function LibraryScreen({ onNavigate, routines, deletingId, onDeleteRoutine, onPlayRoutine }) {
   /**
    * 새 루틴 만들기 화면으로 이동합니다.
    */
@@ -39,10 +39,16 @@ function LibraryScreen({ onNavigate, routines, deletingId, onDeleteRoutine }) {
               key={routine.id}
               className={`routine-item${deletingId === routine.id ? ' deleting' : ''}`}
             >
-              <div className="routine-thumb">{routine.thumb}</div>
-              <div className="routine-info">
-                <div className="routine-name">{routine.name}</div>
-                <div className="routine-meta">{routine.meta}</div>
+              <div 
+                className="routine-clickable" 
+                onClick={() => onPlayRoutine && onPlayRoutine(routine)}
+                style={{ display: 'flex', flex: 1, alignItems: 'center', cursor: 'pointer', gap: '12px' }}
+              >
+                <div className="routine-thumb">{routine.thumb}</div>
+                <div className="routine-info" style={{ flex: 1 }}>
+                  <div className="routine-name">{routine.name}</div>
+                  <div className="routine-meta">{routine.meta}</div>
+                </div>
               </div>
               <div className="routine-actions">
                 <div className="icon-btn" title="편집">

@@ -1,6 +1,15 @@
 import json
 
-from decouple import config
+from pathlib import Path
+from decouple import Config, RepositoryEnv
+
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
+env_path = BASE_DIR / '.env'
+if env_path.exists():
+    config = Config(RepositoryEnv(env_path))
+else:
+    from decouple import config
+
 from openai import OpenAI
 
 
