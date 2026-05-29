@@ -135,7 +135,7 @@ REST_FRAMEWORK = {
 # CORS Configuration
 CORS_ALLOWED_ORIGINS = config(
     'CORS_ALLOWED_ORIGINS',
-    default='http://localhost:5173,http://localhost:3000,https://audio-fit.vercel.app/',
+    default='http://localhost:5173,http://localhost:3000,https://audio-fit.vercel.app',
     cast=lambda v: [s.strip() for s in v.split(',')]
 )
 
@@ -160,5 +160,5 @@ CORS_EXPOSE_HEADERS = [
 ]
 
 CSRF_TRUSTED_ORIGINS = [
-    'https://audio-fit.vercel.app/',
+    'https://audio-fit.vercel.app',
 ]
