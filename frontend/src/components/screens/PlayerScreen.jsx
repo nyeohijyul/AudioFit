@@ -13,7 +13,7 @@
  */
 
 import ScreenLayout from '../ScreenLayout';
-import { EXERCISES } from '../constants';
+import { EXERCISES as DEFAULT_EXERCISES } from '../constants';
 
 const SPEED_OPTIONS = ['0.75×', '1×', '1.25×', '1.5×'];
 
@@ -29,15 +29,22 @@ function PlayerScreen({
   onSeekForward,
   onSeekBack,
   onSetSpeed,
+  routineName,
+  exercises = DEFAULT_EXERCISES,
+  ttsPhase,
+  currentTtsText,
+  ttsProgress,
+  ttsAudioRef,
+  onTTSEnd,
 }) {
-  const exercise = EXERCISES[curEx];
+  const exercise = exercises[curEx] || { name: '완료', desc: '모든 운동이 끝났습니다!', next: '없음', duration: 30 };
 
   const playerHeader = (
     <div className="header-row screen-header__row">
       <div className="screen-header__titles">
-        <h2>아침 5분 코어 깨우기</h2>
+        <h2>{routineName || '아침 5분 코어 깨우기'}</h2>
         <p>
-          {curEx + 1} / {EXERCISES.length}번째 동작
+          {curEx + 1} / {exercises.length}번째 동작
         </p>
       </div>
       <span className="header-icon">🔊</span>
@@ -48,11 +55,11 @@ function PlayerScreen({
     <ScreenLayout screenId="screen-player" headerExtra={playerHeader}>
       <div className="progress-bar-wrap pt">
         <div className="progress-bar">
-          <div className="progress-fill" />
+          <div className="progress-fill" style={{ width: `${(timerSec / (exercise.duration || 30)) * 100}%` }} />
         </div>
         <div className="progress-labels">
-          <span>6:12</span>
-          <span>15:00</span>
+          <span>{timerSec}초 남음</span>
+          <span>{exercise.duration || 30}초 전체</span>
         </div>
       </div>
 
@@ -80,7 +87,19 @@ function PlayerScreen({
       </div>
 
       <div className="action-big">{exercise.name}</div>
-      <div className="action-desc">{exercise.desc}</div>
+
+      {/* TTS 재생 중일 때 현재 텍스트만 보여줌 */}
+      {ttsPhase === 'playing' ? (
+        <div className="tts-display">
+          <div className="tts-label">설명 재생 중...</div>
+          <div className="tts-text">{currentTtsText}</div>
+          <div className="tts-progress-bar">
+            <div className="tts-progress-fill" style={{ width: `${ttsProgress}%` }} />
+          </div>
+        </div>
+      ) : (
+        <div className="action-desc">{exercise.desc}</div>
+      )}
 
       <div className="next-hint">
         다음 동작 → <strong>{exercise.next}</strong>
@@ -116,6 +135,9 @@ function PlayerScreen({
           </button>
         ))}
       </div>
+
+      {/* 숨겨진 오디오 엘리먼트: 재생 완료 시 onTTSEnd 호출 */}
+      <audio ref={ttsAudioRef} style={{ display: 'none' }} onEnded={onTTSEnd} />
     </ScreenLayout>
   );
 }

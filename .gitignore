@@ -26,6 +26,7 @@ backend/*.egg-info/
 backend/dist/
 backend/build/
 backend/firebase-service-account.json
+backend/google-cloud-service-account.json
 
 # Logs
 logs

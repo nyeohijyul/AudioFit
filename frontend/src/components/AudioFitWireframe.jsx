@@ -22,6 +22,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import './AudioFitWireframe.css';
 import ScreenNav from './ScreenNav';
 import TabBar from './TabBar';
+import { useAuth } from '../contexts/AuthContext';
 import {
   DONUT_RADIUS,
   EXERCISES,
@@ -36,6 +37,7 @@ import LibraryScreen from './screens/LibraryScreen';
 import MyPageScreen from './screens/MyPageScreen';
 import YoutubeInputModal from './YoutubeInputModal';
 import SubtitleEditorModal from './SubtitleEditorModal';
+import usePlayerTTS from '../hooks/usePlayerTTS';
 
 /**
  * 슬라이더 값(0~max)을 종료 시각 문자열(mm:ss)로 변환합니다 (원본 updateSlider).
@@ -58,6 +60,7 @@ function calcDonutOffset(timerSec) {
 }
 
 function AudioFitWireframe({ user, onLogout }) {
+  const { token, getToken } = useAuth();
   const [activeScreen, setActiveScreen] = useState('home');
 
   const [ytLink, setYtLink] = useState('');
@@ -65,8 +68,9 @@ function AudioFitWireframe({ user, onLogout }) {
   const [segSlider, setSegSlider] = useState(60);
   const [translateOn, setTranslateOn] = useState(true);
 
-  const [curEx, setCurEx] = useState(2);
-  const [timerSec, setTimerSec] = useState(24);
+  const [currentRoutine, setCurrentRoutine] = useState(null);
+  const [curEx, setCurEx] = useState(0);
+  const [timerSec, setTimerSec] = useState(30);
   const [timerRunning, setTimerRunning] = useState(false);
   const [playBtnIcon, setPlayBtnIcon] = useState('⏸');
   const [speed, setSpeed] = useState('1×');
@@ -84,8 +88,82 @@ function AudioFitWireframe({ user, onLogout }) {
   const timerIntervalRef = useRef(null);
   const clipIdRef = useRef(1);
 
+  // TTS 훅
+  const { ttsPhase, currentTtsText, ttsProgress, ttsAudioRef, playTTS, stopTTS } = usePlayerTTS(token, getToken);
+
+  // Helper to map routine subtitles to player exercises dynamically
+  const activeExercises = useMemo(() => {
+    if (!currentRoutine || !currentRoutine.clips || currentRoutine.clips.length === 0) {
+      return EXERCISES;
+    }
+
+    const exercises = [];
+    currentRoutine.clips.forEach((clip) => {
+      const grouped = {};
+      const orderedNames = [];
+
+      (clip.subtitles || []).forEach((sub) => {
+        if (!sub.selected) return;
+        const exName = sub.exercise || '준비/기타';
+        if (!grouped[exName]) {
+          grouped[exName] = [];
+          orderedNames.push(exName);
+        }
+        grouped[exName].push(sub);
+      });
+
+      orderedNames.forEach((exName, idx) => {
+        const items = grouped[exName];
+        const desc = items.map((sub) => sub.translated || sub.original).join(' ');
+
+        const startTimes = items.map((sub) => {
+          if (typeof sub.start === 'number') return sub.start;
+          const parts = (sub.time || '00:00').split(':').map(Number);
+          return (parts[0] || 0) * 60 + (parts[1] || 0);
+        });
+        const minStart = Math.min(...startTimes);
+
+        let maxEnd = Math.max(...items.map((sub) => {
+          if (typeof sub.start === 'number') return sub.start + (sub.duration || 5);
+          const parts = (sub.time || '00:00').split(':').map(Number);
+          return (parts[0] || 0) * 60 + (parts[1] || 0) + 5;
+        }));
+
+        if (idx < orderedNames.length - 1) {
+          const nextExName = orderedNames[idx + 1];
+          const nextItems = grouped[nextExName];
+          const nextStartTimes = nextItems.map((sub) => {
+            if (typeof sub.start === 'number') return sub.start;
+            const parts = (sub.time || '00:00').split(':').map(Number);
+            return (parts[0] || 0) * 60 + (parts[1] || 0);
+          });
+          maxEnd = Math.min(...nextStartTimes);
+        }
+
+        const durationSec = Math.max(5, Math.round(maxEnd - minStart));
+
+        exercises.push({
+          name: exName,
+          desc: desc || '이 동작에 대한 설명이 없습니다.',
+          duration: durationSec,
+          next: orderedNames[idx + 1] || '마무리/완료!',
+        });
+      });
+    });
+
+    return exercises.length > 0 ? exercises : EXERCISES;
+  }, [currentRoutine]);
+
   const endVal = useMemo(() => formatEndTime(segSlider), [segSlider]);
-  const donutOffset = useMemo(() => calcDonutOffset(timerSec), [timerSec]);
+  const donutOffset = useMemo(() => {
+    const total = activeExercises[curEx]?.duration || 30;
+    const circ = 2 * Math.PI * DONUT_RADIUS;
+    return circ * (1 - timerSec / total);
+  }, [timerSec, curEx, activeExercises]);
+
+  const [showYoutubeModal, setShowYoutubeModal] = useState(false);
+  const [showSubtitleModal, setShowSubtitleModal] = useState(false);
+  const [selectedClipId, setSelectedClipId] = useState(null);
 
   const [showYoutubeModal, setShowYoutubeModal] = useState(false);
   const [showSubtitleModal, setShowSubtitleModal] = useState(false);
@@ -121,6 +199,7 @@ function AudioFitWireframe({ user, onLogout }) {
             endVal={endVal}
             translateOn={translateOn}
             onToggleTranslate={handleToggleTranslate}
+            onSaveRoutine={handleSaveRoutine}
           />
         );
       case 'player':
@@ -137,6 +216,18 @@ function AudioFitWireframe({ user, onLogout }) {
             onSeekForward={handleSeekForward}
             onSeekBack={handleSeekBack}
             onSetSpeed={handleSetSpeed}
+            routineName={currentRoutine?.name}
+            exercises={activeExercises}
+              ttsPhase={ttsPhase}
+              currentTtsText={currentTtsText}
+              ttsProgress={ttsProgress}
+              ttsAudioRef={ttsAudioRef}
+              onTTSEnd={() => {
+                // TTS 완료 시 타이머 시작
+                const ex = activeExercises[curEx];
+                setTimerSec(ex?.duration || 30);
+                startTimer();
+              }}
           />
         );
       case 'library':
@@ -146,6 +237,7 @@ function AudioFitWireframe({ user, onLogout }) {
             routines={routines}
             deletingId={deletingId}
             onDeleteRoutine={handleDeleteRoutine}
+            onPlayRoutine={handlePlayRoutine}
           />
         );
       case 'mypage':
@@ -195,14 +287,19 @@ function AudioFitWireframe({ user, onLogout }) {
     setPlayBtnIcon('▶');
   }, []);
 
-  /**
-   * 플레이어 화면으로 전환될 때만 타이머 자동 시작 (원본 showScreen — 일시정지 시 재시작 방지).
-   */
+  // Play TTS on exercise change when player is active
   useEffect(() => {
-    if (activeScreen === 'player') {
+    if (activeScreen !== 'player' || !token) return;
+    const ex = activeExercises[curEx];
+    if (!ex) return;
+
+    stopTTS();
+    // playTTS will start audio and onEnded callback will start timer
+    playTTS(ex.desc, () => {
+      setTimerSec(ex.duration || 30);
       startTimer();
-    }
-  }, [activeScreen, startTimer]);
+    });
+  }, [curEx, activeScreen, activeExercises, token, playTTS, stopTTS, startTimer]);
 
   /**
    * 타이머가 0이 되면 다음 동작으로 이동 (원본 interval else nextExercise).
@@ -210,21 +307,23 @@ function AudioFitWireframe({ user, onLogout }) {
   useEffect(() => {
     if (timerSec === 0 && timerRunning) {
       setCurEx((idx) => {
-        if (idx < EXERCISES.length - 1) {
+        if (idx < activeExercises.length - 1) {
           return idx + 1;
         }
         return idx;
       });
-      setTimerSec(TOTAL_SEC);
+      const nextDuration = activeExercises[curEx + 1]?.duration || 30;
+      setTimerSec(nextDuration);
     }
-  }, [timerSec, timerRunning]);
+  }, [timerSec, timerRunning, activeExercises, curEx]);
 
   /**
    * 동작 인덱스가 바뀌면 타이머를 초기화합니다 (원본 renderExercise).
    */
   useEffect(() => {
-    setTimerSec(TOTAL_SEC);
-  }, [curEx]);
+    const duration = activeExercises[curEx]?.duration || 30;
+    setTimerSec(duration);
+  }, [curEx, activeExercises]);
 
   /**
    * 언마운트 시 interval 정리.
@@ -252,8 +351,8 @@ function AudioFitWireframe({ user, onLogout }) {
    * 다음 동작 (원본 nextExercise).
    */
   const handleNextExercise = useCallback(() => {
-    setCurEx((idx) => (idx < EXERCISES.length - 1 ? idx + 1 : idx));
-  }, []);
+    setCurEx((idx) => (idx < activeExercises.length - 1 ? idx + 1 : idx));
+  }, [activeExercises.length]);
 
   /**
    * 이전 동작 (원본 prevExercise).
@@ -273,8 +372,17 @@ function AudioFitWireframe({ user, onLogout }) {
    * 10초 뒤로 (원본 seekBack).
    */
   const handleSeekBack = useCallback(() => {
-    setTimerSec((s) => Math.min(TOTAL_SEC, s + 10));
-  }, []);
+    const total = activeExercises[curEx]?.duration || 30;
+    setTimerSec((s) => Math.min(total, s + 10));
+  }, [curEx, activeExercises]);
+
+  const handlePlayRoutine = useCallback((routine) => {
+    setCurrentRoutine(routine);
+    setCurEx(0);
+    const firstDuration = routine.clips?.[0]?.subtitles?.filter(s => s.selected)?.length > 0 ? 30 : 30; // computed on state change
+    setTimerSec(30);
+    showScreen('player');
+  }, [showScreen]);
 
   /**
    * 배속 칩 선택 (원본 setSpeed).
@@ -292,13 +400,46 @@ function AudioFitWireframe({ user, onLogout }) {
     setShowYoutubeModal(true);
   }, [ytLink]);
 
-  const handleConfirmAddClip = useCallback((payload) => {
+  const handleConfirmAddClip = useCallback(async (payload) => {
     const id = payload.id || `clip-${clipIdRef.current++}`;
     const label = payload.label || '새 영상 클립';
     const meta = payload.meta || payload.duration || '전체 구간';
-    setClips((prev) => [...prev, { id, label, meta, url: payload.url }]);
+    const url = payload.url;
+    const youtube_url = payload.youtube_url;
+
+    // 먼저 clip을 추가 (자막은 로딩 중)
+    const newClip = { id, label, meta, url, subtitles: [] };
+    setClips((prev) => [...prev, newClip]);
     setShowYoutubeModal(false);
-  }, []);
+
+    // youtube_url이 있으면 자막 API 호출
+    if (youtube_url && token) {
+      try {
+        const response = await fetch('http://localhost:8000/api/v1/clips/transcript/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({ youtube_url }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          // clip의 subtitles 업데이트
+          setClips((prev) =>
+            prev.map((c) =>
+              c.id === id ? { ...c, subtitles: data.subtitles || [] } : c
+            )
+          );
+        } else {
+          console.error('자막 로드 실패:', response.status);
+        }
+      } catch (error) {
+        console.error('자막 API 호출 오류:', error);
+      }
+    }
+  }, [token]);
 
   const handleDeleteClip = useCallback((id) => {
     setClips((prev) => prev.filter((c) => c.id !== id));
@@ -309,10 +450,37 @@ function AudioFitWireframe({ user, onLogout }) {
     setShowSubtitleModal(true);
   }, []);
 
-  const handleSaveSubtitles = useCallback((subtitles) => {
+  const handleSaveSubtitles = useCallback(async (subtitles) => {
     setClips((prev) => prev.map((c) => (c.id === selectedClipId ? { ...c, subtitles } : c)));
     setShowSubtitleModal(false);
-  }, [selectedClipId]);
+
+    const clip = clips.find((c) => c.id === selectedClipId);
+    if (clip && token) {
+      try {
+        const videoIdMatch = clip.url ? clip.url.match(/(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/) : null;
+        const videoId = videoIdMatch ? videoIdMatch[1] : '';
+
+        if (videoId) {
+          await fetch('http://localhost:8000/api/v1/clips/save-user-clip/', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              video_id: videoId,
+              subtitles: subtitles,
+              youtube_url: clip.url,
+              title: clip.label,
+              duration: clip.meta,
+            }),
+          });
+        }
+      } catch (error) {
+        console.error('자막 서버 저장 중 오류 발생:', error);
+      }
+    }
+  }, [selectedClipId, clips, token]);
 
   /**
    * 번역 모드 토글 반전.
@@ -321,17 +489,101 @@ function AudioFitWireframe({ user, onLogout }) {
     setTranslateOn((v) => !v);
   }, []);
 
+  useEffect(() => {
+    async function fetchRoutines() {
+      if (!token) return;
+      try {
+        const response = await fetch('http://localhost:8000/api/v1/routines/', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+        if (response.ok) {
+          const data = await response.json();
+          const mappedRoutines = data.map((r) => ({
+            id: String(r.id),
+            thumb: '🧘',
+            name: r.name,
+            meta: `${r.clips?.length || 0}개 영상 루틴 · 초보자`,
+            clips: r.clips,
+          }));
+          setRoutines(mappedRoutines);
+        }
+      } catch (error) {
+        console.error('루틴 로드 실패:', error);
+      }
+    }
+    fetchRoutines();
+  }, [token]);
+
+  const handleSaveRoutine = useCallback(async (name) => {
+    const id = `routine-${Date.now()}`;
+    const newRoutine = {
+      id,
+      thumb: '🧘',
+      name,
+      meta: `${clips.length}개 영상 루틴 · 초보자`,
+      clips: clips,
+    };
+    setRoutines((prev) => [newRoutine, ...prev]);
+    showScreen('library');
+
+    if (token) {
+      try {
+        const response = await fetch('http://localhost:8000/api/v1/routines/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            name,
+            clips,
+          }),
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setRoutines((prev) =>
+            prev.map((r) =>
+              r.id === id
+                ? {
+                    ...r,
+                    id: String(data.id),
+                  }
+                : r
+            )
+          );
+        }
+      } catch (error) {
+        console.error('루틴 서버 저장 실패:', error);
+      }
+    }
+  }, [clips, token, showScreen]);
+
   /**
    * 보관함 루틴 삭제 + 페이드 아웃 (원본 deleteRoutine).
    * @param {string} id
    */
-  const handleDeleteRoutine = useCallback((id) => {
+  const handleDeleteRoutine = useCallback(async (id) => {
     setDeletingId(id);
     setTimeout(() => {
       setRoutines((prev) => prev.filter((r) => r.id !== id));
       setDeletingId(null);
     }, 200);
-  }, []);
+
+    if (token && !String(id).startsWith('routine-')) {
+      try {
+        await fetch(`http://localhost:8000/api/v1/routines/${id}/`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+      } catch (error) {
+        console.error('루틴 서버 삭제 실패:', error);
+      }
+    }
+  }, [token]);
 
   /**
    * 체력 수준 버튼 선택 (원본 setLevel).
