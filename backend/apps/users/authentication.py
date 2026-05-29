@@ -57,13 +57,22 @@ class FirebaseAuthentication(authentication.BaseAuthentication):
 
     def get_firebase_app(self):
         if not firebase_admin._apps:
-            service_account = config('FIREBASE_SERVICE_ACCOUNT_PATH', default=os.getenv('FIREBASE_SERVICE_ACCOUNT_PATH', ''))
-            if service_account:
-                service_account_path = Path(service_account)
-                if not service_account_path.is_absolute():
-                    service_account_path = settings.BASE_DIR / service_account_path
-                cred = credentials.Certificate(str(service_account_path))
+            import json
+            firebase_json = os.getenv('FIREBASE_SERVICE_ACCOUNT_JSON')
+            if firebase_json:
+                try:
+                    cred = credentials.Certificate(json.loads(firebase_json))
+                except Exception as e:
+                    logger.exception('Failed to parse FIREBASE_SERVICE_ACCOUNT_JSON env variable.')
+                    raise exceptions.AuthenticationFailed('Invalid FIREBASE_SERVICE_ACCOUNT_JSON format.') from e
             else:
-                cred = credentials.ApplicationDefault()
+                service_account = config('FIREBASE_SERVICE_ACCOUNT_PATH', default=os.getenv('FIREBASE_SERVICE_ACCOUNT_PATH', ''))
+                if service_account:
+                    service_account_path = Path(service_account)
+                    if not service_account_path.is_absolute():
+                        service_account_path = settings.BASE_DIR / service_account_path
+                    cred = credentials.Certificate(str(service_account_path))
+                else:
+                    cred = credentials.ApplicationDefault()
             firebase_admin.initialize_app(cred)
         return firebase_admin.get_app()

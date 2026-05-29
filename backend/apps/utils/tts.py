@@ -10,6 +10,15 @@ def _get_credentials(sa_path: str | None):
     except Exception:
         return None
 
+    # Check for raw JSON env variable first (ideal for cloud platforms like Render)
+    google_json = os.getenv('GOOGLE_CREDENTIALS_JSON')
+    if google_json:
+        import json
+        try:
+            return service_account.Credentials.from_service_account_info(json.loads(google_json))
+        except Exception:
+            pass
+
     if not sa_path:
         sa_path = os.getenv('GOOGLE_APPLICATION_CREDENTIALS', '')
 
@@ -25,7 +34,10 @@ def _get_credentials(sa_path: str | None):
         if not os.path.isabs(sa_path):
             from pathlib import Path
             sa_path = str(Path(sa_path))
-        return service_account.Credentials.from_service_account_file(sa_path)
+        try:
+            return service_account.Credentials.from_service_account_file(sa_path)
+        except Exception:
+            pass
     return None
 
 
