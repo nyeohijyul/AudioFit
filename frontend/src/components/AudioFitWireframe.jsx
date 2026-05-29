@@ -39,6 +39,8 @@ import YoutubeInputModal from './YoutubeInputModal';
 import SubtitleEditorModal from './SubtitleEditorModal';
 import usePlayerTTS from '../hooks/usePlayerTTS';
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_BASE || 'http://localhost:8000';
+
 /**
  * 슬라이더 값(0~max)을 종료 시각 문자열(mm:ss)로 변환합니다 (원본 updateSlider).
  * @param {number} val - range input 값
@@ -415,7 +417,7 @@ function AudioFitWireframe({ user, onLogout }) {
     // youtube_url이 있으면 자막 API 호출
     if (youtube_url && token) {
       try {
-        const response = await fetch('http://localhost:8000/api/v1/clips/transcript/', {
+        const response = await fetch(`${API_BASE_URL}/api/v1/clips/transcript/`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -461,7 +463,7 @@ function AudioFitWireframe({ user, onLogout }) {
         const videoId = videoIdMatch ? videoIdMatch[1] : '';
 
         if (videoId) {
-          await fetch('http://localhost:8000/api/v1/clips/save-user-clip/', {
+          await fetch(`${API_BASE_URL}/api/v1/clips/save-user-clip/`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -493,7 +495,7 @@ function AudioFitWireframe({ user, onLogout }) {
     async function fetchRoutines() {
       if (!token) return;
       try {
-        const response = await fetch('http://localhost:8000/api/v1/routines/', {
+        const response = await fetch(`${API_BASE_URL}/api/v1/routines/`, {
           headers: {
             'Authorization': `Bearer ${token}`,
           },
@@ -530,7 +532,7 @@ function AudioFitWireframe({ user, onLogout }) {
 
     if (token) {
       try {
-        const response = await fetch('http://localhost:8000/api/v1/routines/', {
+        const response = await fetch(`${API_BASE_URL}/api/v1/routines/`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -573,7 +575,7 @@ function AudioFitWireframe({ user, onLogout }) {
 
     if (token && !String(id).startsWith('routine-')) {
       try {
-        await fetch(`http://localhost:8000/api/v1/routines/${id}/`, {
+        await fetch(`${API_BASE_URL}/api/v1/routines/${id}/`, {
           method: 'DELETE',
           headers: {
             'Authorization': `Bearer ${token}`,
