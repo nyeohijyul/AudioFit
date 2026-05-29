@@ -10,3 +10,5 @@ yt-dlp>=2024.3.10
 openai>=1.0.0
 google-cloud-texttospeech
 gTTS
+psycopg2-binary>=2.9.0
+dj-database-url>=2.0.0
