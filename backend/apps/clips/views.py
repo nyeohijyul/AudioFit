@@ -66,7 +66,8 @@ class ClipViewSet(viewsets.ModelViewSet):
         # 기존 클립이 있는지 확인 (캐시 히트)
         clip, created = Clip.objects.get_or_create(
             video_id=video_id,
-            defaults={'youtube_url': youtube_url, 'user': None}  # 로그인하지 않은 사용자도 조회 가능
+            user=None,
+            defaults={'youtube_url': youtube_url}  # 로그인하지 않은 사용자도 조회 가능
         )
         
         # 메타데이터가 없으면 가져오기
