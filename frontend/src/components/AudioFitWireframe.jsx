@@ -165,9 +165,9 @@ function AudioFitWireframe({ user, onLogout }) {
   const [showSubtitleModal, setShowSubtitleModal] = useState(false);
   const [selectedClipId, setSelectedClipId] = useState(null);
 
-  const [showYoutubeModal, setShowYoutubeModal] = useState(false);
-  const [showSubtitleModal, setShowSubtitleModal] = useState(false);
-  const [selectedClipId, setSelectedClipId] = useState(null);
+  // const [showYoutubeModal, setShowYoutubeModal] = useState(false);
+  // const [showSubtitleModal, setShowSubtitleModal] = useState(false);
+  // const [selectedClipId, setSelectedClipId] = useState(null);
 
   /**
    * 화면을 전환합니다. TabBar는 유지되고 활성 Screen만 교체됩니다 (원본 showScreen).
@@ -218,16 +218,16 @@ function AudioFitWireframe({ user, onLogout }) {
             onSetSpeed={handleSetSpeed}
             routineName={currentRoutine?.name}
             exercises={activeExercises}
-              ttsPhase={ttsPhase}
-              currentTtsText={currentTtsText}
-              ttsProgress={ttsProgress}
-              ttsAudioRef={ttsAudioRef}
-              onTTSEnd={() => {
-                // TTS 완료 시 타이머 시작
-                const ex = activeExercises[curEx];
-                setTimerSec(ex?.duration || 30);
-                startTimer();
-              }}
+            ttsPhase={ttsPhase}
+            currentTtsText={currentTtsText}
+            ttsProgress={ttsProgress}
+            ttsAudioRef={ttsAudioRef}
+            onTTSEnd={() => {
+              // TTS 완료 시 타이머 시작
+              const ex = activeExercises[curEx];
+              setTimerSec(ex?.duration || 30);
+              startTimer();
+            }}
           />
         );
       case 'library':
@@ -547,9 +547,9 @@ function AudioFitWireframe({ user, onLogout }) {
             prev.map((r) =>
               r.id === id
                 ? {
-                    ...r,
-                    id: String(data.id),
-                  }
+                  ...r,
+                  id: String(data.id),
+                }
                 : r
             )
           );
