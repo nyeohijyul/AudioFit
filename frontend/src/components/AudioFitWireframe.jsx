@@ -37,6 +37,7 @@ import LibraryScreen from './screens/LibraryScreen';
 import MyPageScreen from './screens/MyPageScreen';
 import YoutubeInputModal from './YoutubeInputModal';
 import SubtitleEditorModal from './SubtitleEditorModal';
+import usePlayerTTS from '../hooks/usePlayerTTS';
 
 /**
  * 슬라이더 값(0~max)을 종료 시각 문자열(mm:ss)로 변환합니다 (원본 updateSlider).
@@ -59,7 +60,7 @@ function calcDonutOffset(timerSec) {
 }
 
 function AudioFitWireframe({ user, onLogout }) {
-  const { token } = useAuth();
+  const { token, getToken } = useAuth();
   const [activeScreen, setActiveScreen] = useState('home');
 
   const [ytLink, setYtLink] = useState('');
@@ -86,6 +87,9 @@ function AudioFitWireframe({ user, onLogout }) {
 
   const timerIntervalRef = useRef(null);
   const clipIdRef = useRef(1);
+
+  // TTS 훅
+  const { ttsPhase, currentTtsText, ttsProgress, ttsAudioRef, playTTS, stopTTS } = usePlayerTTS(token, getToken);
 
   // Helper to map routine subtitles to player exercises dynamically
   const activeExercises = useMemo(() => {
@@ -210,6 +214,16 @@ function AudioFitWireframe({ user, onLogout }) {
             onSetSpeed={handleSetSpeed}
             routineName={currentRoutine?.name}
             exercises={activeExercises}
+              ttsPhase={ttsPhase}
+              currentTtsText={currentTtsText}
+              ttsProgress={ttsProgress}
+              ttsAudioRef={ttsAudioRef}
+              onTTSEnd={() => {
+                // TTS 완료 시 타이머 시작
+                const ex = activeExercises[curEx];
+                setTimerSec(ex?.duration || 30);
+                startTimer();
+              }}
           />
         );
       case 'library':
@@ -269,14 +283,19 @@ function AudioFitWireframe({ user, onLogout }) {
     setPlayBtnIcon('▶');
   }, []);
 
-  /**
-   * 플레이어 화면으로 전환될 때만 타이머 자동 시작 (원본 showScreen — 일시정지 시 재시작 방지).
-   */
+  // Play TTS on exercise change when player is active
   useEffect(() => {
-    if (activeScreen === 'player') {
+    if (activeScreen !== 'player' || !token) return;
+    const ex = activeExercises[curEx];
+    if (!ex) return;
+
+    stopTTS();
+    // playTTS will start audio and onEnded callback will start timer
+    playTTS(ex.desc, () => {
+      setTimerSec(ex.duration || 30);
       startTimer();
-    }
-  }, [activeScreen, startTimer]);
+    });
+  }, [curEx, activeScreen, activeExercises, token, playTTS, stopTTS, startTimer]);
 
   /**
    * 타이머가 0이 되면 다음 동작으로 이동 (원본 interval else nextExercise).

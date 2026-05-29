@@ -31,6 +31,11 @@ function PlayerScreen({
   onSetSpeed,
   routineName,
   exercises = DEFAULT_EXERCISES,
+  ttsPhase,
+  currentTtsText,
+  ttsProgress,
+  ttsAudioRef,
+  onTTSEnd,
 }) {
   const exercise = exercises[curEx] || { name: '완료', desc: '모든 운동이 끝났습니다!', next: '없음', duration: 30 };
 
@@ -82,7 +87,19 @@ function PlayerScreen({
       </div>
 
       <div className="action-big">{exercise.name}</div>
-      <div className="action-desc">{exercise.desc}</div>
+
+      {/* TTS 재생 중일 때 현재 텍스트만 보여줌 */}
+      {ttsPhase === 'playing' ? (
+        <div className="tts-display">
+          <div className="tts-label">설명 재생 중...</div>
+          <div className="tts-text">{currentTtsText}</div>
+          <div className="tts-progress-bar">
+            <div className="tts-progress-fill" style={{ width: `${ttsProgress}%` }} />
+          </div>
+        </div>
+      ) : (
+        <div className="action-desc">{exercise.desc}</div>
+      )}
 
       <div className="next-hint">
         다음 동작 → <strong>{exercise.next}</strong>
@@ -118,6 +135,9 @@ function PlayerScreen({
           </button>
         ))}
       </div>
+
+      {/* 숨겨진 오디오 엘리먼트: 재생 완료 시 onTTSEnd 호출 */}
+      <audio ref={ttsAudioRef} style={{ display: 'none' }} onEnded={onTTSEnd} />
     </ScreenLayout>
   );
 }

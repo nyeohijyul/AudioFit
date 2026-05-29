@@ -6,6 +6,8 @@ from django.shortcuts import get_object_or_404
 
 from apps.utils.youtube import extract_video_id, fetch_youtube_transcript, fetch_youtube_metadata
 from apps.utils.gemini_ai import simplify_subtitles as simplify_subtitles_with_ai
+from apps.utils.tts import generate_speech
+from django.http import HttpResponse
 from .models import Clip, Routine
 from .serializers import ClipSerializer
 
@@ -155,6 +157,22 @@ class ClipViewSet(viewsets.ModelViewSet):
 
         serializer = self.get_serializer(clip)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=['post'], url_path='generate-speech')
+    def generate_speech_action(self, request):
+        """Generate TTS audio for provided text using Google Cloud TTS and return MP3."""
+        text = request.data.get('text', '')
+        language = request.data.get('language', 'ko-KR')
+
+        if not text:
+            return Response({'error': '텍스트가 비어있습니다.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            audio_bytes = generate_speech(text, language_code=language)
+        except Exception as exc:
+            return Response({'error': f'TTS 생성 실패: {str(exc)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        return HttpResponse(audio_bytes, content_type='audio/mpeg')
 
 
 class RoutineViewSet(viewsets.ViewSet):

@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useCallback, useEffect, useState } from 'react';
 import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth';
 import '../firebaseConfig';
 
@@ -7,17 +7,20 @@ const googleProvider = new GoogleAuthProvider();
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
+  const [firebaseUser, setFirebaseUser] = useState(null);
   const [token, setToken] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const auth = getAuth();
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        const idToken = await firebaseUser.getIdToken();
-        setUser({ uid: firebaseUser.uid, email: firebaseUser.email, name: firebaseUser.displayName });
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUserState) => {
+      if (firebaseUserState) {
+        const idToken = await firebaseUserState.getIdToken();
+        setFirebaseUser(firebaseUserState);
+        setUser({ uid: firebaseUserState.uid, email: firebaseUserState.email, name: firebaseUserState.displayName });
         setToken(idToken);
       } else {
+        setFirebaseUser(null);
         setUser(null);
         setToken(null);
       }
@@ -26,6 +29,18 @@ export function AuthProvider({ children }) {
 
     return unsubscribe;
   }, []);
+
+  const getToken = useCallback(async (forceRefresh = false) => {
+    if (!firebaseUser) {
+      return null;
+    }
+    try {
+      return await firebaseUser.getIdToken(forceRefresh);
+    } catch (error) {
+      console.error('Failed to refresh Firebase token', error);
+      return token;
+    }
+  }, [firebaseUser, token]);
 
   const loginWithGoogle = () => {
     const auth = getAuth();
@@ -38,7 +53,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, isLoading, loginWithGoogle, logout }}>
+    <AuthContext.Provider value={{ user, token, getToken, isLoading, loginWithGoogle, logout }}>
       {children}
     </AuthContext.Provider>
   );
