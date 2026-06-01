@@ -11,6 +11,14 @@ import os
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 COOKIES_PATH = os.path.join(BASE_DIR, 'cookies.txt')
 
+print(f"=== [DEBUG] COOKIES_PATH: {COOKIES_PATH} ===")
+if os.path.exists(COOKIES_PATH):
+    with open(COOKIES_PATH, 'r') as f:
+        first_line = f.readline()
+    print(f"=== [DEBUG] 쿠키 파일 발견됨! 첫 줄 내용: {first_line.strip()} ===")
+else:
+    print("❌ === [DEBUG] 에러: 루트 폴더에서 cookies.txt 파일을 찾을 수 없습니다! ===")
+
 LANGUAGE_PRIORITY = ['ko', 'en']
 
 
