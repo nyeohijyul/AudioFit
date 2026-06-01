@@ -6,6 +6,10 @@ import yt_dlp
 from youtube_transcript_api import YouTubeTranscriptApi
 from youtube_transcript_api._errors import NoTranscriptFound, TranscriptsDisabled, VideoUnavailable
 
+import os
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+COOKIES_PATH = os.path.join(BASE_DIR, 'cookies.txt')
 
 LANGUAGE_PRIORITY = ['ko', 'en']
 
@@ -41,6 +45,8 @@ def fetch_youtube_metadata(video_id):
             'quiet': True,
             'no_warnings': True,
             'extract_flat': True,
+            'cookiefile': COOKIES_PATH,
+            'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         }
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -127,6 +133,8 @@ def fetch_transcript_with_ytdlp(video_id):
         'quiet': True,
         'no_warnings': True,
         'skip_download': True,
+        'cookiefile': COOKIES_PATH,
+        'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
     }
 
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
