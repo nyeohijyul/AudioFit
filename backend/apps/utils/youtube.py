@@ -97,6 +97,20 @@ def fetch_youtube_metadata(video_id):
 
 
 def fetch_youtube_transcript(video_id):
+    # 1. Try youtube-transcript-api first (since it is lightweight and less prone to bot detection)
+    try:
+        transcript_list = get_transcript_for_installed_version(video_id, languages=LANGUAGE_PRIORITY)
+        if transcript_list:
+            return {
+                'success': True,
+                'data': transcript_list,
+            }
+    except (TranscriptsDisabled, NoTranscriptFound, VideoUnavailable) as exc:
+        print(f"=== [DEBUG] youtube-transcript-api 자막 없음/비활성화: {str(exc)} ===")
+    except Exception as exc:
+        print(f"=== [DEBUG] youtube-transcript-api 실패: {str(exc)} ===")
+
+    # 2. Try yt-dlp as a fallback
     try:
         fallback_transcript = fetch_transcript_with_ytdlp(video_id)
         if fallback_transcript:
@@ -105,25 +119,7 @@ def fetch_youtube_transcript(video_id):
                 'data': fallback_transcript,
             }
     except Exception as exc:
-        print(f"=== [DEBUG] yt-dlp 자막 추출 실패 원인: {str(exc)} ===")
-        return {
-            'success': False,
-            'error': f'자막을 가져오는 중 오류가 발생했습니다: {str(exc)}',
-        }
-
-    try:
-        transcript_list = get_transcript_for_installed_version(video_id, languages=LANGUAGE_PRIORITY)
-        if transcript_list:
-            return {
-                'success': True,
-                'data': transcript_list,
-            }
-    except (TranscriptsDisabled, NoTranscriptFound, VideoUnavailable):
-        pass
-    except Exception:
-        # youtube-transcript-api sometimes receives an empty XML response even
-        # when YouTube shows captions. Try yt-dlp's caption URLs before failing.
-        pass
+        print(f"=== [DEBUG] yt-dlp 자막 추출 최종 실패: {str(exc)} ===")
 
     return {
         'success': False,
