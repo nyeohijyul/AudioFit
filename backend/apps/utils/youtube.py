@@ -7,9 +7,29 @@ from youtube_transcript_api import YouTubeTranscriptApi
 from youtube_transcript_api._errors import NoTranscriptFound, TranscriptsDisabled, VideoUnavailable
 
 import os
+import tempfile
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 COOKIES_PATH = os.path.join(BASE_DIR, 'cookies.txt')
+COOKIES_ENV = os.getenv('YOUTUBE_COOKIES_TEXT')
+
+if COOKIES_ENV:
+    # 💡 [자동 판별] 로컬 .env에 적은 값이 '진짜 존재하는 파일 경로'인지 검사합니다.
+    if os.path.exists(COOKIES_ENV):
+        # 로컬 환경: .env에 적힌 경로를 바로 사용합니다.
+        COOKIES_PATH = COOKIES_ENV
+        print(f"=== [DEBUG] 로컬 파일 경로 기반 쿠키 지정 완료: {COOKIES_PATH} ===")
+    else:
+        # Render 배포 환경: 입력된 대용량 텍스트를 파일로 구워냅니다.
+        TEMP_DIR = tempfile.gettempdir()
+        COOKIES_PATH = os.path.join(TEMP_DIR, 'cookies.txt')
+        with open(COOKIES_PATH, 'w', encoding='utf-8') as f:
+            f.write(COOKIES_ENV.strip())
+        print(f"=== [DEBUG] Render 환경변수 기반 임시 쿠키 파일 생성 완료 ===")
+else:
+    # 혹시나 env 설정을 깜빡했을 때의 최소한의 방어선 (기존 루트 경로)
+    BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    COOKIES_PATH = os.path.join(BASE_DIR, 'cookies.txt')
 
 print(f"=== [DEBUG] COOKIES_PATH: {COOKIES_PATH} ===")
 if os.path.exists(COOKIES_PATH):
