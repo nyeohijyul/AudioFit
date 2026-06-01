@@ -69,32 +69,55 @@ def format_duration(seconds):
 
 
 def fetch_youtube_metadata(video_id):
-    try:
-        ydl_opts = {
-            'quiet': True,
-            'no_warnings': True,
-            'extract_flat': True,
-            'cookiefile': COOKIES_PATH,
-            'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        }
+    ydl_opts = {
+        'quiet': True,
+        'no_warnings': True,
+        'extract_flat': True,
+        'cookiefile': COOKIES_PATH,
+        'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    }
 
+    try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(f'https://www.youtube.com/watch?v={video_id}', download=False)
-            return {
-                'success': True,
-                'title': info.get('title', '제목 없음'),
-                'duration': format_duration(info.get('duration', 0)),
-                'channel': info.get('channel', '채널명 없음'),
-                'thumbnail': info.get('thumbnail', ''),
-            }
     except Exception as exc:
-        return {
-            'success': False,
-            'title': None,
-            'duration': None,
-            'channel': None,
-            'error': f'메타데이터를 가져올 수 없습니다: {str(exc)}',
-        }
+        if "confirm you" in str(exc) or "Sign in" in str(exc):
+            print("=== [DEBUG] 메타데이터: cookies.txt 만료 감지, 브라우저 쿠키 시도 ===")
+            for browser in ['chrome', 'edge', 'firefox', 'brave']:
+                try:
+                    opts = ydl_opts.copy()
+                    opts.pop('cookiefile', None)
+                    opts['cookiesfrombrowser'] = (browser,)
+                    with yt_dlp.YoutubeDL(opts) as ydl:
+                        info = ydl.extract_info(f'https://www.youtube.com/watch?v={video_id}', download=False)
+                        print(f"=== [DEBUG] 메타데이터: {browser} 브라우저 쿠키 성공! ===")
+                        break
+                except Exception:
+                    pass
+            else:
+                return {
+                    'success': False,
+                    'title': None,
+                    'duration': None,
+                    'channel': None,
+                    'error': f'메타데이터를 가져올 수 없습니다: {str(exc)}',
+                }
+        else:
+            return {
+                'success': False,
+                'title': None,
+                'duration': None,
+                'channel': None,
+                'error': f'메타데이터를 가져올 수 없습니다: {str(exc)}',
+            }
+
+    return {
+        'success': True,
+        'title': info.get('title', '제목 없음'),
+        'duration': format_duration(info.get('duration', 0)),
+        'channel': info.get('channel', '채널명 없음'),
+        'thumbnail': info.get('thumbnail', ''),
+    }
 
 
 def fetch_youtube_transcript(video_id):
@@ -168,8 +191,27 @@ def fetch_transcript_with_ytdlp(video_id):
         'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
     }
 
-    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        info = ydl.extract_info(f'https://www.youtube.com/watch?v={video_id}', download=False)
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(f'https://www.youtube.com/watch?v={video_id}', download=False)
+    except Exception as exc:
+        if "confirm you" in str(exc) or "Sign in" in str(exc):
+            print("=== [DEBUG] 자막추출: cookies.txt 만료 감지, 브라우저 쿠키 시도 ===")
+            for browser in ['chrome', 'edge', 'firefox', 'brave']:
+                try:
+                    opts = ydl_opts.copy()
+                    opts.pop('cookiefile', None)
+                    opts['cookiesfrombrowser'] = (browser,)
+                    with yt_dlp.YoutubeDL(opts) as ydl:
+                        info = ydl.extract_info(f'https://www.youtube.com/watch?v={video_id}', download=False)
+                        print(f"=== [DEBUG] 자막추출: {browser} 브라우저 쿠키 성공! ===")
+                        break
+                except Exception:
+                    pass
+            else:
+                raise exc
+        else:
+            raise exc
 
     caption = find_caption(info.get('subtitles') or {})
     if caption is None:
