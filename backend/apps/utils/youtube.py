@@ -129,19 +129,10 @@ def fetch_youtube_transcript(video_id):
 
 
 def get_transcript_for_installed_version(video_id, languages):
-    cookies_dict = None
-    if os.path.exists(COOKIES_PATH):
-        try:
-            cj = http.cookiejar.MozillaCookieJar(COOKIES_PATH)
-            cj.load(ignore_discard=True, ignore_expires=True)
-            cookies_dict = {cookie.name: cookie.value for cookie in cj}
-            print(f"=== [DEBUG] youtube-transcript-api 쿠키 로드 성공! ({len(cookies_dict)}개) ===")
-        except Exception as e:
-            print(f"=== [DEBUG] youtube-transcript-api 쿠키 로드 실패: {e} ===")
-
     kwargs = {'languages': languages}
-    if cookies_dict:
-        kwargs['cookies'] = cookies_dict
+    if os.path.exists(COOKIES_PATH):
+        kwargs['cookies'] = COOKIES_PATH
+        print(f"=== [DEBUG] youtube-transcript-api 쿠키 파일 경로 전달: {COOKIES_PATH} ===")
 
     if hasattr(YouTubeTranscriptApi, 'get_transcript'):
         return YouTubeTranscriptApi.get_transcript(video_id, **kwargs)
