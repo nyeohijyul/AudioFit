@@ -27,7 +27,7 @@ backend/dist/
 backend/build/
 backend/firebase-service-account.json
 backend/googlecloud-service-account.json
-backend/apps/utils/cookies.txt
+backend/cookies.txt
 
 # Logs
 logs
