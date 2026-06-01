@@ -1,6 +1,7 @@
 import json
 import re
 import urllib.request
+import http.cookiejar
 
 import yt_dlp
 from youtube_transcript_api import YouTubeTranscriptApi
@@ -128,10 +129,24 @@ def fetch_youtube_transcript(video_id):
 
 
 def get_transcript_for_installed_version(video_id, languages):
-    if hasattr(YouTubeTranscriptApi, 'get_transcript'):
-        return YouTubeTranscriptApi.get_transcript(video_id, languages=languages)
+    cookies_dict = None
+    if os.path.exists(COOKIES_PATH):
+        try:
+            cj = http.cookiejar.MozillaCookieJar(COOKIES_PATH)
+            cj.load(ignore_discard=True, ignore_expires=True)
+            cookies_dict = {cookie.name: cookie.value for cookie in cj}
+            print(f"=== [DEBUG] youtube-transcript-api 쿠키 로드 성공! ({len(cookies_dict)}개) ===")
+        except Exception as e:
+            print(f"=== [DEBUG] youtube-transcript-api 쿠키 로드 실패: {e} ===")
 
-    fetched_transcript = YouTubeTranscriptApi().fetch(video_id, languages=languages)
+    kwargs = {'languages': languages}
+    if cookies_dict:
+        kwargs['cookies'] = cookies_dict
+
+    if hasattr(YouTubeTranscriptApi, 'get_transcript'):
+        return YouTubeTranscriptApi.get_transcript(video_id, **kwargs)
+
+    fetched_transcript = YouTubeTranscriptApi().fetch(video_id, **kwargs)
     return normalize_transcript_data(fetched_transcript)
 
 
