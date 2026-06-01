@@ -75,6 +75,8 @@ def fetch_youtube_metadata(video_id):
         'extract_flat': True,
         'cookiefile': COOKIES_PATH,
         'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'check_formats': False,
+        'ignore_no_formats_error': True,
     }
 
     try:
@@ -189,6 +191,8 @@ def fetch_transcript_with_ytdlp(video_id):
         'skip_download': True,
         'cookiefile': COOKIES_PATH,
         'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'check_formats': False,
+        'ignore_no_formats_error': True,
     }
 
     try:
