@@ -8,7 +8,7 @@ from youtube_transcript_api._errors import NoTranscriptFound, TranscriptsDisable
 
 import os
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 COOKIES_PATH = os.path.join(BASE_DIR, 'cookies.txt')
 
 LANGUAGE_PRIORITY = ['ko', 'en']
