@@ -28,9 +28,9 @@ function LibraryScreen({ onNavigate, routines, deletingId, onDeleteRoutine, onPl
       title="내 루틴 보관함"
       subtitle={`저장된 루틴 ${routines.length}개`}
     >
-      <div className="section" style={{ paddingBottom: 8 }}>
+      {/* <div className="section" style={{ paddingBottom: 8 }}>
         <input className="input-field" type="text" placeholder="🔍 루틴 이름 검색..." style={{ marginBottom: 0 }} />
-      </div>
+      </div> */}
 
       <div className="section" style={{ paddingTop: 8 }}>
         <div id="library-list">
@@ -39,8 +39,8 @@ function LibraryScreen({ onNavigate, routines, deletingId, onDeleteRoutine, onPl
               key={routine.id}
               className={`routine-item${deletingId === routine.id ? ' deleting' : ''}`}
             >
-              <div 
-                className="routine-clickable" 
+              <div
+                className="routine-clickable"
                 onClick={() => onPlayRoutine && onPlayRoutine(routine)}
                 style={{ display: 'flex', flex: 1, alignItems: 'center', cursor: 'pointer', gap: '12px' }}
               >
@@ -53,9 +53,6 @@ function LibraryScreen({ onNavigate, routines, deletingId, onDeleteRoutine, onPl
               <div className="routine-actions">
                 <div className="icon-btn" title="편집">
                   ✏️
-                </div>
-                <div className="icon-btn" title="공유">
-                  ↗
                 </div>
                 <button
                   type="button"

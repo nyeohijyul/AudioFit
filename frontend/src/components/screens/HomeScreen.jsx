@@ -32,7 +32,7 @@ function HomeScreen({ onNavigate }) {
       title="AudioFit"
       subtitle="좋은 아침이에요 👋 오늘도 같이 운동해요"
     >
-      <div className="section">
+      {/* <div className="section">
         <div className="section-title">오늘의 추천 루틴</div>
         <div
           className="card featured"
@@ -91,7 +91,7 @@ function HomeScreen({ onNavigate }) {
             <span className="tag">수면 개선</span>
           </div>
         </div>
-      </div>
+      </div> */}
     </ScreenLayout>
   );
 }
