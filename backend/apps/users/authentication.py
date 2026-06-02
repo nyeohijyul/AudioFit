@@ -4,6 +4,9 @@ from pathlib import Path
 import firebase_admin
 from firebase_admin import auth as firebase_auth, credentials
 from decouple import Config, RepositoryEnv
+from google.auth.transport.requests import Request
+import google.oauth2.id_token
+from firebase_admin._token_gen import ID_TOKEN_CERT_URI
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 env_path = BASE_DIR / '.env'
@@ -44,7 +47,7 @@ class FirebaseAuthentication(authentication.BaseAuthentication):
         token = auth_header[1].decode()
         try:
             app = self.get_firebase_app()
-            decoded_token = firebase_auth.verify_id_token(token, app=app)
+            decoded_token = self.verify_id_token_with_clock_skew(token, app)
         except Exception as exc:
             logger.exception('Firebase token verification failed.')
             raise exceptions.AuthenticationFailed('Firebase token verification failed.') from exc
@@ -54,6 +57,29 @@ class FirebaseAuthentication(authentication.BaseAuthentication):
 
     def authenticate_header(self, request):
         return self.keyword
+
+    def verify_id_token_with_clock_skew(self, token, app, clock_skew_seconds=5):
+        try:
+            return firebase_auth.verify_id_token(token, app=app)
+        except Exception as exc:
+            message = str(exc)
+            if 'Token used too early' in message or 'Used too early' in message:
+                logger.warning('Retrying Firebase token verification with %s seconds clock skew: %s', clock_skew_seconds, message)
+                request = Request()
+                try:
+                    verified = google.oauth2.id_token.verify_token(
+                        token,
+                        request=request,
+                        audience=app.project_id,
+                        certs_url=ID_TOKEN_CERT_URI,
+                        clock_skew_in_seconds=clock_skew_seconds,
+                    )
+                    verified['uid'] = verified.get('sub')
+                    return verified
+                except Exception as fallback_exc:
+                    logger.exception('Firebase token verification with clock skew also failed.')
+                    raise fallback_exc from exc
+            raise
 
     def get_firebase_app(self):
         if not firebase_admin._apps:

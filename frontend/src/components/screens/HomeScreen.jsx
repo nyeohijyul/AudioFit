@@ -226,7 +226,7 @@ function secondsForDuration(duration) {
 }
 
 function HomeScreen({ onMenuClick, onEditRecommendedRoutine }) {
-  const { token } = useAuth();
+  const { token, getToken } = useAuth();
   const [answers, setAnswers] = useState({
     focus: ['waist', 'cardio'],
   });
@@ -327,12 +327,64 @@ function HomeScreen({ onMenuClick, onEditRecommendedRoutine }) {
   };
 
   const searchYoutubeVideos = async (exercise) => {
-    const backendVideos = await fetchExerciseVideosFromBackend(exercise);
-    if (backendVideos && backendVideos.length > 0) {
-      return backendVideos;
+    const query = `${exercise.koName || exercise.name} 맨몸 운동 자세 홈트`;
+    if (!YOUTUBE_API_KEY) {
+      const backendVideos = await fetchExerciseVideosFromBackend(exercise);
+      if (backendVideos && backendVideos.length > 0) {
+        return backendVideos;
+      }
+      return buildMockVideos(exercise);
     }
-    setErrorMessage('서버 YouTube 검색에 실패해 데모 영상 리스트를 표시했어요.');
-    return buildMockVideos(exercise);
+
+    try {
+      const searchUrl = new URL('https://www.googleapis.com/youtube/v3/search');
+      searchUrl.search = new URLSearchParams({
+        key: YOUTUBE_API_KEY,
+        part: 'snippet',
+        q: query,
+        type: 'video',
+        maxResults: '3',
+        videoEmbeddable: 'true',
+      }).toString();
+
+      const searchResponse = await fetch(searchUrl);
+      if (!searchResponse.ok) throw new Error(`YouTube search ${searchResponse.status}`);
+      const searchData = await searchResponse.json();
+      const ids = (searchData.items || []).map((item) => item.id.videoId).filter(Boolean);
+      if (ids.length === 0) {
+        const backendVideos = await fetchExerciseVideosFromBackend(exercise);
+        return backendVideos?.length ? backendVideos : buildMockVideos(exercise);
+      }
+
+      const videosUrl = new URL('https://www.googleapis.com/youtube/v3/videos');
+      videosUrl.search = new URLSearchParams({
+        key: YOUTUBE_API_KEY,
+        part: 'snippet,contentDetails,statistics',
+        id: ids.join(','),
+      }).toString();
+
+      const videosResponse = await fetch(videosUrl);
+      if (!videosResponse.ok) throw new Error(`YouTube videos ${videosResponse.status}`);
+      const videosData = await videosResponse.json();
+
+      return (videosData.items || []).slice(0, 3).map((item, index) => ({
+        id: item.id,
+        title: item.snippet?.title || `${exercise.koName} 운동 영상`,
+        channel: item.snippet?.channelTitle || 'YouTube',
+        duration: parseYoutubeDuration(item.contentDetails?.duration) || '영상',
+        views: item.statistics?.viewCount ? `${Number(item.statistics.viewCount).toLocaleString()}회` : '조회수 정보 없음',
+        url: `https://www.youtube.com/watch?v=${item.id}`,
+        thumbnail: item.snippet?.thumbnails?.medium?.url || item.snippet?.thumbnails?.default?.url || '',
+        topPick: index === 0,
+      }));
+    } catch {
+      const backendVideos = await fetchExerciseVideosFromBackend(exercise);
+      if (backendVideos && backendVideos.length > 0) {
+        return backendVideos;
+      }
+      setErrorMessage('YouTube API 검색에 실패해 데모 영상 리스트를 표시했어요.');
+      return buildMockVideos(exercise);
+    }
   };
 
   const normalizeVideoMap = (videos) =>
@@ -340,20 +392,33 @@ function HomeScreen({ onMenuClick, onEditRecommendedRoutine }) {
       Object.entries(videos || {}).map(([exerciseId, items]) => [
         exerciseId,
         (items || []).map((video) => ({
-          ...video,
+          id: video.id || `${exerciseId}-${Math.random().toString(36).substr(2, 5)}`,
+          title: video.title || video.snippet?.title || `${video.koName || video.name || '추천'} 운동 영상`,
+          channel: video.channel || video.snippet?.channelTitle || 'YouTube',
+          duration: video.duration || video.contentDetails?.duration || '영상',
+          views:
+            video.views ||
+            (video.statistics?.viewCount ? `${Number(video.statistics.viewCount).toLocaleString()}회` : '조회수 정보 없음'),
+          url: video.url || `https://www.youtube.com/watch?v=${video.id}`,
+          thumbnail:
+            video.thumbnail ||
+            video.snippet?.thumbnails?.medium?.url ||
+            video.snippet?.thumbnails?.default?.url ||
+            '',
           topPick: video.topPick ?? video.top_pick ?? false,
         })),
       ]),
     );
 
   const tryBackendRecommendation = async () => {
-    if (!token) return null;
+    const authToken = token || (await getToken(true));
+    if (!authToken) return null;
 
     const response = await fetch(`${API_BASE_URL}/api/v1/clips/recommend-routine/`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
+        Authorization: `Bearer ${authToken}`,
       },
       body: JSON.stringify({
         goal: answers.goal,
@@ -438,22 +503,11 @@ function HomeScreen({ onMenuClick, onEditRecommendedRoutine }) {
       meta: video.duration || `${Math.round(duration / 60)}분`,
       url: video.url,
       youtube_url: video.url,
-      aiSimplified: true,
+      aiSimplified: false,
       source: 'recommendation',
       exerciseId: exercise.id,
-      subtitles: [
-        {
-          index: 0,
-          time: '00:00',
-          start: 0,
-          duration,
-          customDuration: duration,
-          original: `${exercise.koName} 동작 가이드`,
-          translated: exercise.description,
-          exercise: exercise.koName,
-          selected: true,
-        },
-      ],
+      subtitles: [],
+      duration,
     };
   };
 

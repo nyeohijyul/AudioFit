@@ -39,7 +39,12 @@ import YoutubeInputModal from './YoutubeInputModal';
 import SubtitleEditorModal from './SubtitleEditorModal';
 import usePlayerTTS from '../hooks/usePlayerTTS';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_BASE || 'http://localhost:8000';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_BASE || '';
+
+const getApiUrl = (path) => {
+  const base = API_BASE_URL.replace(/\/$/, '');
+  return `${base}${path}`;
+};
 
 /**
  * 슬라이더 값(0~max)을 종료 시각 문자열(mm:ss)로 변환합니다 (원본 updateSlider).
@@ -96,6 +101,14 @@ function AudioFitWireframe({ user, onLogout }) {
 
   // TTS 훅
   const { ttsPhase, currentTtsText, ttsProgress, ttsAudioRef, playTTS, stopTTS } = usePlayerTTS(token, getToken);
+
+  const getAuthToken = useCallback(async () => {
+    if (getToken) {
+      const refreshedToken = await getToken(true);
+      if (refreshedToken) return refreshedToken;
+    }
+    return token;
+  }, [token, getToken]);
 
   // Helper to map routine subtitles to player exercises dynamically
   const activeExercises = useMemo(() => {
@@ -329,16 +342,18 @@ function AudioFitWireframe({ user, onLogout }) {
         setIsFinished(true);
         setWorkoutCount((count) => {
           const newCount = count + 1;
-          if (token) {
-            fetch(`${API_BASE_URL}/api/v1/auth/verify/`, {
+          (async () => {
+            const authToken = await getAuthToken();
+            if (!authToken) return;
+            fetch(getApiUrl('/api/v1/auth/verify/'), {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`,
+                'Authorization': `Bearer ${authToken}`,
               },
               body: JSON.stringify({ workout_count: newCount }),
             }).catch(err => console.error('운동 횟수 저장 실패:', err));
-          }
+          })();
           return newCount;
         });
       }
@@ -441,13 +456,15 @@ function AudioFitWireframe({ user, onLogout }) {
     setShowYoutubeModal(false);
 
     // youtube_url이 있으면 자막 API 호출
-    if (youtube_url && token) {
+    if (youtube_url) {
       try {
-        const response = await fetch(`${API_BASE_URL}/api/v1/clips/transcript/`, {
+        const authToken = await getAuthToken();
+        if (!authToken) return;
+        const response = await fetch(getApiUrl('/api/v1/clips/transcript/'), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
+            'Authorization': `Bearer ${authToken}`,
           },
           body: JSON.stringify({ youtube_url }),
         });
@@ -483,17 +500,19 @@ function AudioFitWireframe({ user, onLogout }) {
     setShowSubtitleModal(false);
 
     const clip = clips.find((c) => c.id === selectedClipId);
-    if (clip && token) {
+    if (clip) {
       try {
+        const authToken = await getAuthToken();
+        if (!authToken) return;
         const videoIdMatch = clip.url ? clip.url.match(/(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/) : null;
         const videoId = videoIdMatch ? videoIdMatch[1] : '';
 
         if (videoId) {
-          await fetch(`${API_BASE_URL}/api/v1/clips/save-user-clip/`, {
+          await fetch(getApiUrl('/api/v1/clips/save-user-clip/'), {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`,
+              'Authorization': `Bearer ${authToken}`,
             },
             body: JSON.stringify({
               video_id: videoId,
@@ -519,11 +538,12 @@ function AudioFitWireframe({ user, onLogout }) {
 
   useEffect(() => {
     async function fetchRoutines() {
-      if (!token) return;
+      const authToken = await getAuthToken();
+      if (!authToken) return;
       try {
-        const response = await fetch(`${API_BASE_URL}/api/v1/routines/`, {
+        const response = await fetch(getApiUrl('/api/v1/routines/'), {
           headers: {
-            'Authorization': `Bearer ${token}`,
+            'Authorization': `Bearer ${authToken}`,
           },
         });
         if (response.ok) {
@@ -542,15 +562,16 @@ function AudioFitWireframe({ user, onLogout }) {
       }
     }
     fetchRoutines();
-  }, [token]);
+  }, [getAuthToken]);
 
   useEffect(() => {
     async function fetchUserProfile() {
-      if (!token) return;
       try {
-        const response = await fetch(`${API_BASE_URL}/api/v1/auth/verify/`, {
+        const authToken = await getAuthToken();
+        if (!authToken) return;
+        const response = await fetch(getApiUrl('/api/v1/auth/verify/'), {
           headers: {
-            'Authorization': `Bearer ${token}`,
+            'Authorization': `Bearer ${authToken}`,
           },
         });
         if (response.ok) {
@@ -567,17 +588,53 @@ function AudioFitWireframe({ user, onLogout }) {
       }
     }
     fetchUserProfile();
-  }, [token]);
+  }, [getAuthToken]);
 
-  const handleEditRoutine = useCallback((routine) => {
-    setEditingRoutine(routine);
+  const fetchClipTranscript = useCallback(async (clip) => {
+    if (!clip?.youtube_url || (Array.isArray(clip.subtitles) && clip.subtitles.length > 0)) {
+      return clip;
+    }
+    const authToken = await getAuthToken();
+    if (!authToken) {
+      return clip;
+    }
+
+    try {
+      const response = await fetch(getApiUrl('/api/v1/clips/transcript/'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({ youtube_url: clip.youtube_url }),
+      });
+      if (!response.ok) {
+        return clip;
+      }
+      const data = await response.json();
+      return {
+        ...clip,
+        subtitles: data.subtitles || [],
+        aiSimplified: false,
+      };
+    } catch (error) {
+      console.error('추천 루틴 자막 로드 실패:', error);
+      return clip;
+    }
+  }, [getAuthToken]);
+
+  const handleEditRoutine = useCallback(async (routine) => {
     if (routine) {
-      setClips(routine.clips || []);
+      const loadedClips = await Promise.all((routine.clips || []).map(fetchClipTranscript));
+      const loadedRoutine = { ...routine, clips: loadedClips };
+      setEditingRoutine(loadedRoutine);
+      setClips(loadedClips);
     } else {
+      setEditingRoutine(null);
       setClips(INITIAL_CLIPS);
     }
     showScreen('new');
-  }, [showScreen]);
+  }, [showScreen, fetchClipTranscript]);
 
   const handleSaveRoutine = useCallback(async (name) => {
     if (editingRoutine) {
@@ -591,13 +648,14 @@ function AudioFitWireframe({ user, onLogout }) {
       showScreen('library');
       setEditingRoutine(null);
 
-      if (token && !String(editingRoutine.id).startsWith('routine-')) {
+      const authToken = await getAuthToken();
+      if (authToken && !String(editingRoutine.id).startsWith('routine-')) {
         try {
-          const response = await fetch(`${API_BASE_URL}/api/v1/routines/${editingRoutine.id}/`, {
+          const response = await fetch(getApiUrl(`/api/v1/routines/${editingRoutine.id}/`), {
             method: 'PUT',
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`,
+              'Authorization': `Bearer ${authToken}`,
             },
             body: JSON.stringify({
               name,
@@ -625,13 +683,14 @@ function AudioFitWireframe({ user, onLogout }) {
     setRoutines((prev) => [newRoutine, ...prev]);
     showScreen('library');
 
-    if (token) {
+    const authToken = await getAuthToken();
+    if (authToken) {
       try {
-        const response = await fetch(`${API_BASE_URL}/api/v1/routines/`, {
+        const response = await fetch(getApiUrl('/api/v1/routines/'), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
+            'Authorization': `Bearer ${authToken}`,
           },
           body: JSON.stringify({
             name,
@@ -655,7 +714,7 @@ function AudioFitWireframe({ user, onLogout }) {
         console.error('루틴 서버 저장 실패:', error);
       }
     }
-  }, [editingRoutine, clips, token, showScreen]);
+  }, [editingRoutine, clips, token, showScreen, getAuthToken]);
 
   /**
    * 보관함 루틴 삭제 + 페이드 아웃 (원본 deleteRoutine).
@@ -668,19 +727,20 @@ function AudioFitWireframe({ user, onLogout }) {
       setDeletingId(null);
     }, 200);
 
-    if (token && !String(id).startsWith('routine-')) {
+    const authToken = await getAuthToken();
+    if (authToken && !String(id).startsWith('routine-')) {
       try {
-        await fetch(`${API_BASE_URL}/api/v1/routines/${id}/`, {
+        await fetch(getApiUrl(`/api/v1/routines/${id}/`), {
           method: 'DELETE',
           headers: {
-            'Authorization': `Bearer ${token}`,
+            'Authorization': `Bearer ${authToken}`,
           },
         });
       } catch (error) {
         console.error('루틴 서버 삭제 실패:', error);
       }
     }
-  }, [token]);
+  }, [getAuthToken]);
 
   /**
    * 체력 수준 버튼 선택 (원본 setLevel).
@@ -688,17 +748,19 @@ function AudioFitWireframe({ user, onLogout }) {
    */
   const handleSetLevel = useCallback((levelId) => {
     setFitnessLevel(levelId);
-    if (token) {
-      fetch(`${API_BASE_URL}/api/v1/auth/verify/`, {
+    (async () => {
+      const authToken = await getAuthToken();
+      if (!authToken) return;
+      fetch(getApiUrl('/api/v1/auth/verify/'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
+          'Authorization': `Bearer ${authToken}`,
         },
         body: JSON.stringify({ fitness_level: levelId }),
       }).catch(err => console.error('체력 수준 저장 실패:', err));
-    }
-  }, [token]);
+    })();
+  }, [getAuthToken]);
 
   /**
    * 마이페이지 설정 토글 (원본 toggleSwitch).

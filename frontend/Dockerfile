@@ -1,4 +1,5 @@
-FROM node:18-alpine
+# node:18-alpine에서 node:22-alpine으로 변경
+FROM node:22-alpine
 
 WORKDIR /app
 

@@ -74,7 +74,7 @@ function getInitialSelectedIndexes(subtitles) {
 }
 
 export default function SubtitleEditorModal({ clip, onClose, onSave }) {
-  const { token } = useAuth();
+  const { token, getToken } = useAuth();
   const [mode, setMode] = useState('original');
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [aiError, setAiError] = useState('');
@@ -109,7 +109,8 @@ export default function SubtitleEditorModal({ clip, onClose, onSave }) {
   }
 
   async function handleSimplifySelected() {
-    if (!token) {
+    const authToken = token || (await getToken(true));
+    if (!authToken) {
       setAiError('로그인 인증 정보가 아직 준비되지 않았습니다.');
       return;
     }
@@ -127,7 +128,7 @@ export default function SubtitleEditorModal({ clip, onClose, onSave }) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${authToken}`,
         },
         body: JSON.stringify({ subtitles: selectedSubtitles }),
       });
