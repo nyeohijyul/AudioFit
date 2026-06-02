@@ -1,35 +1,51 @@
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from audiofit.db import users_collection, MongoDBModel
+from django.contrib.auth.models import User
+
+
+def get_or_create_django_user(firebase_user):
+    uid = getattr(firebase_user, 'uid', None) or getattr(firebase_user, 'username', None)
+    email = getattr(firebase_user, 'email', '') or ''
+    name = getattr(firebase_user, 'name', '') or (email.split('@')[0] if email else 'User')
+
+    if not uid:
+        return None, uid, email, name
+
+    user, created = User.objects.get_or_create(
+        username=uid,
+        defaults={
+            'email': email,
+            'first_name': name[:150],
+        },
+    )
+
+    fields_to_update = []
+    if email and user.email != email:
+        user.email = email
+        fields_to_update.append('email')
+    if name and user.first_name != name[:150]:
+        user.first_name = name[:150]
+        fields_to_update.append('first_name')
+    if fields_to_update and not created:
+        user.save(update_fields=fields_to_update)
+
+    return user, uid, email, name
 
 
 class VerifyTokenView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, *args, **kwargs):
-        user = request.user
-        uid = getattr(user, 'uid', None)
-        email = getattr(user, 'email', None)
-        name = getattr(user, 'name', None) or email.split('@')[0] if email else 'User'
+        django_user, uid, email, name = get_or_create_django_user(request.user)
+        if django_user is None:
+            return Response({'error': '유효한 사용자 정보가 없습니다.'}, status=400)
 
-        # Check and auto-create user in MongoDB if users_collection is initialized
-        if users_collection is not None and uid:
-            mongo_user = users_collection.find_one({"firebase_uid": uid})
-            if not mongo_user:
-                new_user_doc = MongoDBModel.create_user(
-                    firebase_uid=uid,
-                    display_name=name,
-                    fitness_level='beginner'
-                )
-                users_collection.insert_one(new_user_doc)
+        from apps.clips.models import Routine, UserProfile
 
-        # Django PostgreSQL Profile 연동
-        from apps.clips.models import UserProfile
-        profile, created = UserProfile.objects.get_or_create(user=user)
+        profile, created = UserProfile.objects.get_or_create(user=django_user)
 
         if created:
-            from apps.clips.models import Routine
             # 신규 유저를 위한 웰컴 예시 루틴 자동 생성
             welcome_clips = [
                 {
@@ -47,7 +63,7 @@ class VerifyTokenView(APIView):
                 }
             ]
             Routine.objects.create(
-                user=user,
+                user=django_user,
                 name="아침 5분 스트레칭 (웰컴 예시)",
                 clips=welcome_clips
             )
@@ -61,9 +77,13 @@ class VerifyTokenView(APIView):
         })
 
     def post(self, request, *args, **kwargs):
-        user = request.user
+        django_user, _, _, _ = get_or_create_django_user(request.user)
+        if django_user is None:
+            return Response({'error': '유효한 사용자 정보가 없습니다.'}, status=400)
+
         from apps.clips.models import UserProfile
-        profile, _ = UserProfile.objects.get_or_create(user=user)
+
+        profile, _ = UserProfile.objects.get_or_create(user=django_user)
 
         workout_count = request.data.get('workout_count')
         fitness_level = request.data.get('fitness_level')

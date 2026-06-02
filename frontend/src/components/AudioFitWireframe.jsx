@@ -198,7 +198,7 @@ function AudioFitWireframe({ user, onLogout }) {
     const triggerMenu = () => setIsMyPageOpen(true);
     switch (activeScreen) {
       case 'home':
-        return <HomeScreen onNavigate={showScreen} onMenuClick={triggerMenu} />;
+        return <HomeScreen onNavigate={showScreen} onMenuClick={triggerMenu} onEditRecommendedRoutine={handleEditRoutine} />;
       case 'new':
         return (
           <NewRoutineScreen

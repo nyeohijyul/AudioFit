@@ -45,11 +45,10 @@ class Routine(models.Model):
 
 
 class UserProfile(models.Model):
-    """사용자 프로필 데이터 모델 (운동 횟수, 체력 수준 저장)"""
+    """사용자 프로필 데이터 모델"""
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
-    workout_count = models.IntegerField(default=0)
+    workout_count = models.IntegerField(default=12)
     fitness_level = models.CharField(max_length=20, default='beginner')
 
     def __str__(self):
         return f"{self.user.username}'s Profile"
-
