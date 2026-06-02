@@ -1,0 +1,8 @@
+# 실행
+docker compose up -d
+docker compose up -d --build # 코드 수정시 
+
+# 종료 
+docker compose down
+
+rudwns7g@kookmin.ac.kr

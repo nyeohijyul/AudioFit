@@ -21,7 +21,7 @@ const recommendedVideos = [
 ];
 
 export default function YoutubeInputModal({ onClose, onConfirm }) {
-  const { token } = useAuth();
+  const { token, getToken } = useAuth();
   const [url, setUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [preview, setPreview] = useState(null);
@@ -32,7 +32,8 @@ export default function YoutubeInputModal({ onClose, onConfirm }) {
       setLoading(true);
       setError('');
 
-      if (!token) {
+      const authToken = token || (await getToken(true));
+      if (!authToken) {
         setError('로그인 인증 정보가 아직 준비되지 않았습니다. 잠시 후 다시 시도해 주세요.');
         setPreview(null);
         return;
@@ -42,7 +43,7 @@ export default function YoutubeInputModal({ onClose, onConfirm }) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${authToken}`,
         },
         body: JSON.stringify({ youtube_url: youtubeUrl }),
         credentials: 'include',

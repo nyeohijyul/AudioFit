@@ -35,12 +35,14 @@ export function AuthProvider({ children }) {
       return null;
     }
     try {
-      return await firebaseUser.getIdToken(forceRefresh);
+      const idToken = await firebaseUser.getIdToken(forceRefresh);
+      setToken(idToken);
+      return idToken;
     } catch (error) {
       console.error('Failed to refresh Firebase token', error);
-      return token;
+      return null;
     }
-  }, [firebaseUser, token]);
+  }, [firebaseUser]);
 
   const loginWithGoogle = () => {
     const auth = getAuth();
