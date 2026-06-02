@@ -64,6 +64,7 @@ function calcDonutOffset(timerSec) {
 function AudioFitWireframe({ user, onLogout }) {
   const { token, getToken } = useAuth();
   const [activeScreen, setActiveScreen] = useState('home');
+  const [isMyPageOpen, setIsMyPageOpen] = useState(false);
 
   const [ytLink, setYtLink] = useState('');
   const [clips, setClips] = useState(INITIAL_CLIPS);
@@ -76,6 +77,8 @@ function AudioFitWireframe({ user, onLogout }) {
   const [timerRunning, setTimerRunning] = useState(false);
   const [playBtnIcon, setPlayBtnIcon] = useState('⏸');
   const [speed, setSpeed] = useState('1×');
+  const [workoutCount, setWorkoutCount] = useState(0);
+  const [isFinished, setIsFinished] = useState(false);
 
   const [routines, setRoutines] = useState(INITIAL_ROUTINES);
   const [deletingId, setDeletingId] = useState(null);
@@ -176,7 +179,11 @@ function AudioFitWireframe({ user, onLogout }) {
    * @param {string} screenId - home | new | player | library | mypage
    */
   const showScreen = useCallback((screenId) => {
-    setActiveScreen(screenId);
+    if (screenId === 'mypage') {
+      setIsMyPageOpen(true);
+    } else {
+      setActiveScreen(screenId);
+    }
   }, []);
 
   /**
@@ -184,9 +191,10 @@ function AudioFitWireframe({ user, onLogout }) {
    * @returns {React.ReactElement|null}
    */
   const renderActiveScreen = () => {
+    const triggerMenu = () => setIsMyPageOpen(true);
     switch (activeScreen) {
       case 'home':
-        return <HomeScreen onNavigate={showScreen} />;
+        return <HomeScreen onNavigate={showScreen} onMenuClick={triggerMenu} />;
       case 'new':
         return (
           <NewRoutineScreen
@@ -202,6 +210,7 @@ function AudioFitWireframe({ user, onLogout }) {
             translateOn={translateOn}
             onToggleTranslate={handleToggleTranslate}
             onSaveRoutine={handleSaveRoutine}
+            onMenuClick={triggerMenu}
           />
         );
       case 'player':
@@ -230,6 +239,12 @@ function AudioFitWireframe({ user, onLogout }) {
               setTimerSec(ex?.duration || 30);
               startTimer();
             }}
+            isFinished={isFinished}
+            onGoHome={() => {
+              setIsFinished(false);
+              setCurEx(0);
+              showScreen('home');
+            }}
           />
         );
       case 'library':
@@ -240,21 +255,11 @@ function AudioFitWireframe({ user, onLogout }) {
             deletingId={deletingId}
             onDeleteRoutine={handleDeleteRoutine}
             onPlayRoutine={handlePlayRoutine}
-          />
-        );
-      case 'mypage':
-        return (
-          <MyPageScreen
-            user={user}
-            onLogout={onLogout}
-            fitnessLevel={fitnessLevel}
-            onSetLevel={handleSetLevel}
-            settingsToggles={settingsToggles}
-            onToggleSetting={handleToggleSetting}
+            onMenuClick={triggerMenu}
           />
         );
       default:
-        return <HomeScreen onNavigate={showScreen} />;
+        return <HomeScreen onNavigate={showScreen} onMenuClick={triggerMenu} />;
     }
   };
 
@@ -308,16 +313,31 @@ function AudioFitWireframe({ user, onLogout }) {
    */
   useEffect(() => {
     if (timerSec === 0 && timerRunning) {
-      setCurEx((idx) => {
-        if (idx < activeExercises.length - 1) {
-          return idx + 1;
-        }
-        return idx;
-      });
-      const nextDuration = activeExercises[curEx + 1]?.duration || 30;
-      setTimerSec(nextDuration);
+      if (curEx < activeExercises.length - 1) {
+        setCurEx((idx) => idx + 1);
+        const nextDuration = activeExercises[curEx + 1]?.duration || 30;
+        setTimerSec(nextDuration);
+      } else {
+        // 모든 운동 완료!
+        pauseTimer();
+        setIsFinished(true);
+        setWorkoutCount((count) => {
+          const newCount = count + 1;
+          if (token) {
+            fetch(`${API_BASE_URL}/api/v1/auth/verify/`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+              },
+              body: JSON.stringify({ workout_count: newCount }),
+            }).catch(err => console.error('운동 횟수 저장 실패:', err));
+          }
+          return newCount;
+        });
+      }
     }
-  }, [timerSec, timerRunning, activeExercises, curEx]);
+  }, [timerSec, timerRunning, activeExercises, curEx, pauseTimer, token]);
 
   /**
    * 동작 인덱스가 바뀌면 타이머를 초기화합니다 (원본 renderExercise).
@@ -518,6 +538,31 @@ function AudioFitWireframe({ user, onLogout }) {
     fetchRoutines();
   }, [token]);
 
+  useEffect(() => {
+    async function fetchUserProfile() {
+      if (!token) return;
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/v1/auth/verify/`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+        if (response.ok) {
+          const data = await response.json();
+          if (data.workout_count !== undefined) {
+            setWorkoutCount(data.workout_count);
+          }
+          if (data.fitness_level !== undefined) {
+            setFitnessLevel(data.fitness_level);
+          }
+        }
+      } catch (error) {
+        console.error('사용자 프로필 로드 실패:', error);
+      }
+    }
+    fetchUserProfile();
+  }, [token]);
+
   const handleSaveRoutine = useCallback(async (name) => {
     const id = `routine-${Date.now()}`;
     const newRoutine = {
@@ -593,7 +638,17 @@ function AudioFitWireframe({ user, onLogout }) {
    */
   const handleSetLevel = useCallback((levelId) => {
     setFitnessLevel(levelId);
-  }, []);
+    if (token) {
+      fetch(`${API_BASE_URL}/api/v1/auth/verify/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ fitness_level: levelId }),
+      }).catch(err => console.error('체력 수준 저장 실패:', err));
+    }
+  }, [token]);
 
   /**
    * 마이페이지 설정 토글 (원본 toggleSwitch).
@@ -632,6 +687,30 @@ function AudioFitWireframe({ user, onLogout }) {
 
           <div className="screen-area" key={activeScreen}>
             {renderActiveScreen()}
+          </div>
+
+          {/* 마이페이지 드로어 (슬라이딩 메뉴) */}
+          <div className={`mypage-drawer-overlay ${isMyPageOpen ? 'open' : ''}`} onClick={() => setIsMyPageOpen(false)} />
+          <div className={`mypage-drawer ${isMyPageOpen ? 'open' : ''}`}>
+            <div className="mypage-drawer-header">
+              <h3>👤 내 정보</h3>
+              <button type="button" className="mypage-drawer-close" onClick={() => setIsMyPageOpen(false)}>
+                ✕
+              </button>
+            </div>
+            <div className="mypage-drawer-body">
+              <MyPageScreen
+                user={user}
+                onLogout={onLogout}
+                fitnessLevel={fitnessLevel}
+                onSetLevel={handleSetLevel}
+                settingsToggles={settingsToggles}
+                onToggleSetting={handleToggleSetting}
+                isDrawer={true}
+                workoutCount={workoutCount}
+                routinesCount={routines.length}
+              />
+            </div>
           </div>
 
           {showYoutubeModal && (

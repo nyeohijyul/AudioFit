@@ -21,13 +21,20 @@ const LEVEL_OPTIONS = [
   { id: 'advanced', label: '💪 고급자' },
 ];
 
-function MyPageScreen({ user, onLogout, fitnessLevel, onSetLevel, settingsToggles, onToggleSetting }) {
-  return (
-    <ScreenLayout
-      screenId="screen-mypage"
-      title="마이페이지"
-      subtitle={user?.email ? `${user.email} 님, 환영합니다!` : '이번 달 12회 운동했어요 🎉'}
-    >
+function MyPageScreen({ user, onLogout, fitnessLevel, onSetLevel, settingsToggles, onToggleSetting, isDrawer, workoutCount = 0, routinesCount = 4 }) {
+  const subtitleText = user?.email ? `${user.email} 님, 환영합니다!` : `이번 달 ${workoutCount}회 운동했어요 🎉`;
+
+  const content = (
+    <>
+      {/* {isDrawer && (
+        <div className="section" style={{ background: 'var(--wine-xlight)', borderBottom: '1px solid var(--border)' }}>
+          <div style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--wine)' }}>마이페이지</div>
+          <div style={{ fontSize: '0.78rem', color: 'var(--text2)', marginTop: '4px' }}>
+            {subtitleText}
+          </div>
+        </div>
+      )} */}
+
       {user?.email && (
         <div className="section mypage-account-section">
           <div>
@@ -39,24 +46,51 @@ function MyPageScreen({ user, onLogout, fitnessLevel, onSetLevel, settingsToggle
           </button>
         </div>
       )}
+
+      {/* 이번 달 운동 개별 섹션 -> 나의 운동 섹션 */}
       <div className="section">
-        <div className="stats-row">
-          <div className="stat-card">
-            <div className="stat-num">12</div>
-            <div className="stat-label">이번 달 운동</div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-num">4</div>
-            <div className="stat-label">저장된 루틴</div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-num">3h</div>
-            <div className="stat-label">총 운동 시간</div>
-          </div>
+        <div className="section-title">나의 운동</div>
+        <div className="stat-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', background: 'var(--surface2)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
+          <span style={{ fontSize: '0.82rem', fontWeight: 500, color: 'var(--text2)' }}>기록된 운동 횟수</span>
+          <span style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--wine)' }}>{workoutCount}회</span>
         </div>
       </div>
 
+      {/* 저장된 루틴 개별 섹션 */}
       <div className="section">
+        <div className="section-title">저장된 루틴</div>
+        <div className="stat-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', background: 'var(--surface2)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
+          <span style={{ fontSize: '0.82rem', fontWeight: 500, color: 'var(--text2)' }}>저장된 마이 루틴</span>
+          <span style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--wine)' }}>{routinesCount}개</span>
+        </div>
+      </div>
+
+      {/* 총 운동 시간 개별 섹션 */}
+      {/* <div className="section">
+        <div className="section-title">총 운동 시간</div>
+        <div className="stat-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', background: 'var(--surface2)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
+          <span style={{ fontSize: '0.82rem', fontWeight: 500, color: 'var(--text2)' }}>누적 운동 시간</span>
+          <span style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--wine)' }}>3시간</span>
+        </div>
+      </div> */}
+
+      {/* <div className="section">
+        <div className="section-title">나의 체력 수준</div>
+        <div className="level-row">
+          {LEVEL_OPTIONS.map((opt) => (
+            <button
+              key={opt.id}
+              type="button"
+              className={`level-btn${fitnessLevel === opt.id ? ' active' : ''}`}
+              onClick={() => onSetLevel(opt.id)}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div> */}
+
+      {/* <div className="section">
         <div className="section-title">5월 운동 기록</div>
         <div className="cal-grid">
           <div className="cal-day hdr">월</div>
@@ -127,7 +161,21 @@ function MyPageScreen({ user, onLogout, fitnessLevel, onSetLevel, settingsToggle
           </div>
           <Toggle isOn={settingsToggles.t3} onToggle={() => onToggleSetting('t3')} />
         </div>
-      </div>
+      </div> */}
+    </>
+  );
+
+  if (isDrawer) {
+    return <div className="screen-body" style={{ height: '100%', overflowY: 'auto' }}>{content}</div>;
+  }
+
+  return (
+    <ScreenLayout
+      screenId="screen-mypage"
+      title="마이페이지"
+      subtitle={user?.email ? `${user.email} 님, 환영합니다!` : '이번 달 12회 운동했어요 🎉'}
+    >
+      {content}
     </ScreenLayout>
   );
 }

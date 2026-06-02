@@ -45,6 +45,7 @@ function NewRoutineScreen({
   onDeleteClip,
   onOpenSubtitleEditor,
   onSaveRoutine,
+  onMenuClick,
 }) {
   const [routineName, setRoutineName] = useState('');
   const hasClips = clips.length > 0;
@@ -73,6 +74,7 @@ function NewRoutineScreen({
       screenId="screen-new"
       title="새 루틴 만들기"
       subtitle="유튜브 링크를 붙여 넣으면 AI가 자동 분석해요"
+      onMenuClick={onMenuClick}
     >
       <div className="section">
         <div className="section-title-numbered">

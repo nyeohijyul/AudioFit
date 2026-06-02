@@ -18,7 +18,7 @@ import ScreenLayout from '../ScreenLayout';
 /**
  * @param {(screenId: string) => void} onNavigate - 화면 전환 콜백
  */
-function HomeScreen({ onNavigate }) {
+function HomeScreen({ onNavigate, onMenuClick }) {
   /**
    * 플레이어 화면으로 이동합니다 (카드·시작 버튼 공통).
    */
@@ -31,6 +31,7 @@ function HomeScreen({ onNavigate }) {
       screenId="screen-home"
       title="AudioFit"
       subtitle="좋은 아침이에요 👋 오늘도 같이 운동해요"
+      onMenuClick={onMenuClick}
     >
       {/* <div className="section">
         <div className="section-title">오늘의 추천 루틴</div>

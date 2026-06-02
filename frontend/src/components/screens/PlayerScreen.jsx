@@ -36,7 +36,27 @@ function PlayerScreen({
   ttsProgress,
   ttsAudioRef,
   onTTSEnd,
+  isFinished,
+  onGoHome,
 }) {
+  if (isFinished) {
+    return (
+      <ScreenLayout screenId="screen-player-finished" title="운동 완료! 🎉" subtitle="오늘 하루도 한 단계 더 건강해졌어요!">
+        <div style={{ textAlign: 'center', padding: '40px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px' }}>
+          <div style={{ fontSize: '4.5rem' }}>🏆</div>
+          <h2 style={{ color: 'var(--wine)', fontWeight: 700, margin: 0 }}>참 잘하셨어요!</h2>
+          <p style={{ color: 'var(--text2)', fontSize: '0.85rem', lineHeight: 1.6, margin: '0 0 16px' }}>
+            선택한 루틴의 모든 동작을 완료했습니다.<br />
+            마이페이지의 <strong>기록된 운동 횟수</strong>가 1회 추가되었습니다.
+          </p>
+          <button type="button" className="btn-wine" onClick={onGoHome} style={{ width: '100%', maxWidth: '240px' }}>
+            홈으로 돌아가기
+          </button>
+        </div>
+      </ScreenLayout>
+    );
+  }
+
   const exercise = exercises[curEx] || { name: '완료', desc: '모든 운동이 끝났습니다!', next: '없음', duration: 30 };
 
   const playerHeader = (

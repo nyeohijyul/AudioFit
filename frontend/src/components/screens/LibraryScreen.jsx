@@ -14,7 +14,7 @@
 
 import ScreenLayout from '../ScreenLayout';
 
-function LibraryScreen({ onNavigate, routines, deletingId, onDeleteRoutine, onPlayRoutine }) {
+function LibraryScreen({ onNavigate, routines, deletingId, onDeleteRoutine, onPlayRoutine, onMenuClick }) {
   /**
    * 새 루틴 만들기 화면으로 이동합니다.
    */
@@ -27,6 +27,7 @@ function LibraryScreen({ onNavigate, routines, deletingId, onDeleteRoutine, onPl
       screenId="screen-library"
       title="내 루틴 보관함"
       subtitle={`저장된 루틴 ${routines.length}개`}
+      onMenuClick={onMenuClick}
     >
       {/* <div className="section" style={{ paddingBottom: 8 }}>
         <input className="input-field" type="text" placeholder="🔍 루틴 이름 검색..." style={{ marginBottom: 0 }} />
