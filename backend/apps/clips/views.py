@@ -212,6 +212,27 @@ class RoutineViewSet(viewsets.ViewSet):
         }
         return Response(created_routine, status=status.HTTP_201_CREATED)
 
+    def update(self, request, pk=None):
+        django_user = get_django_user(request)
+        routine = get_object_or_404(Routine, pk=pk, user=django_user)
+        name = request.data.get('name')
+        clips = request.data.get('clips', [])
+
+        if not name:
+            return Response({'error': '루틴 이름은 필수 항목입니다.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        routine.name = name
+        routine.clips = clips
+        routine.save()
+
+        updated_routine = {
+            'id': str(routine.id),
+            'name': routine.name,
+            'clips': routine.clips,
+            'created_at': routine.created_at.isoformat() if routine.created_at else None,
+        }
+        return Response(updated_routine, status=status.HTTP_200_OK)
+
     def destroy(self, request, pk=None):
         django_user = get_django_user(request)
         routine = get_object_or_404(Routine, pk=pk, user=django_user)

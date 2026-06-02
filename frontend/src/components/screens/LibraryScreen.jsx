@@ -14,11 +14,12 @@
 
 import ScreenLayout from '../ScreenLayout';
 
-function LibraryScreen({ onNavigate, routines, deletingId, onDeleteRoutine, onPlayRoutine, onMenuClick }) {
+function LibraryScreen({ onNavigate, routines, deletingId, onDeleteRoutine, onPlayRoutine, onMenuClick, onEditRoutine }) {
   /**
    * 새 루틴 만들기 화면으로 이동합니다.
    */
   const goToNew = () => {
+    onEditRoutine && onEditRoutine(null); // Clear editingRoutine when making a new one
     onNavigate('new');
   };
 
@@ -52,9 +53,14 @@ function LibraryScreen({ onNavigate, routines, deletingId, onDeleteRoutine, onPl
                 </div>
               </div>
               <div className="routine-actions">
-                <div className="icon-btn" title="편집">
+                <button
+                  type="button"
+                  className="icon-btn"
+                  title="편집"
+                  onClick={() => onEditRoutine && onEditRoutine(routine)}
+                >
                   ✏️
-                </div>
+                </button>
                 <button
                   type="button"
                   className="icon-btn"

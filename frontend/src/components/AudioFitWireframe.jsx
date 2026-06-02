@@ -79,6 +79,7 @@ function AudioFitWireframe({ user, onLogout }) {
   const [speed, setSpeed] = useState('1×');
   const [workoutCount, setWorkoutCount] = useState(0);
   const [isFinished, setIsFinished] = useState(false);
+  const [editingRoutine, setEditingRoutine] = useState(null);
 
   const [routines, setRoutines] = useState(INITIAL_ROUTINES);
   const [deletingId, setDeletingId] = useState(null);
@@ -145,7 +146,10 @@ function AudioFitWireframe({ user, onLogout }) {
           maxEnd = Math.min(...nextStartTimes);
         }
 
-        const durationSec = Math.max(5, Math.round(maxEnd - minStart));
+        const customDur = items.find((sub) => typeof sub.customDuration === 'number')?.customDuration;
+        const durationSec = typeof customDur === 'number' && customDur > 0 
+          ? customDur 
+          : Math.max(5, Math.round(maxEnd - minStart));
 
         exercises.push({
           name: exName,
@@ -211,6 +215,7 @@ function AudioFitWireframe({ user, onLogout }) {
             onToggleTranslate={handleToggleTranslate}
             onSaveRoutine={handleSaveRoutine}
             onMenuClick={triggerMenu}
+            editingRoutine={editingRoutine}
           />
         );
       case 'player':
@@ -256,6 +261,7 @@ function AudioFitWireframe({ user, onLogout }) {
             onDeleteRoutine={handleDeleteRoutine}
             onPlayRoutine={handlePlayRoutine}
             onMenuClick={triggerMenu}
+            onEditRoutine={handleEditRoutine}
           />
         );
       default:
@@ -472,8 +478,8 @@ function AudioFitWireframe({ user, onLogout }) {
     setShowSubtitleModal(true);
   }, []);
 
-  const handleSaveSubtitles = useCallback(async (subtitles) => {
-    setClips((prev) => prev.map((c) => (c.id === selectedClipId ? { ...c, subtitles } : c)));
+  const handleSaveSubtitles = useCallback(async (subtitles, aiSimplified) => {
+    setClips((prev) => prev.map((c) => (c.id === selectedClipId ? { ...c, subtitles, aiSimplified } : c)));
     setShowSubtitleModal(false);
 
     const clip = clips.find((c) => c.id === selectedClipId);
@@ -563,7 +569,51 @@ function AudioFitWireframe({ user, onLogout }) {
     fetchUserProfile();
   }, [token]);
 
+  const handleEditRoutine = useCallback((routine) => {
+    setEditingRoutine(routine);
+    if (routine) {
+      setClips(routine.clips || []);
+    } else {
+      setClips(INITIAL_CLIPS);
+    }
+    showScreen('new');
+  }, [showScreen]);
+
   const handleSaveRoutine = useCallback(async (name) => {
+    if (editingRoutine) {
+      const updatedRoutine = {
+        ...editingRoutine,
+        name,
+        meta: `${clips.length}개 영상 루틴 · 초보자`,
+        clips: clips,
+      };
+      setRoutines((prev) => prev.map((r) => r.id === editingRoutine.id ? updatedRoutine : r));
+      showScreen('library');
+      setEditingRoutine(null);
+
+      if (token && !String(editingRoutine.id).startsWith('routine-')) {
+        try {
+          const response = await fetch(`${API_BASE_URL}/api/v1/routines/${editingRoutine.id}/`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              name,
+              clips,
+            }),
+          });
+          if (!response.ok) {
+            console.error('루틴 서버 수정 실패:', response.status);
+          }
+        } catch (error) {
+          console.error('루틴 서버 수정 실패:', error);
+        }
+      }
+      return;
+    }
+
     const id = `routine-${Date.now()}`;
     const newRoutine = {
       id,
@@ -605,7 +655,7 @@ function AudioFitWireframe({ user, onLogout }) {
         console.error('루틴 서버 저장 실패:', error);
       }
     }
-  }, [clips, token, showScreen]);
+  }, [editingRoutine, clips, token, showScreen]);
 
   /**
    * 보관함 루틴 삭제 + 페이드 아웃 (원본 deleteRoutine).
@@ -725,7 +775,16 @@ function AudioFitWireframe({ user, onLogout }) {
             />
           )}
 
-          <TabBar activeScreen={activeScreen} onNavigate={showScreen} />
+          <TabBar
+            activeScreen={activeScreen}
+            onNavigate={(screenId) => {
+              if (screenId === 'new') {
+                setEditingRoutine(null);
+                setClips(INITIAL_CLIPS);
+              }
+              showScreen(screenId);
+            }}
+          />
         </div>
       </div>
     </div>
