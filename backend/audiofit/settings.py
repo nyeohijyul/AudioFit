@@ -3,16 +3,10 @@ AudioFit Django Settings
 """
 import os
 from pathlib import Path
-from decouple import Config, RepositoryEnv
+from decouple import config
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-
-env_path = BASE_DIR / '.env'
-if env_path.exists():
-    config = Config(RepositoryEnv(env_path))
-else:
-    from decouple import config
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = config('SECRET_KEY', default='django-insecure-dev-key-change-in-production')
@@ -20,8 +14,7 @@ SECRET_KEY = config('SECRET_KEY', default='django-insecure-dev-key-change-in-pro
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', default=True, cast=bool)
 
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1,audiofit.onrender.com', cast=lambda v: [s.strip() for s in v.split(',')])
-# ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=lambda v: [s.strip() for s in v.split(',')])
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=lambda v: [s.strip() for s in v.split(',')])
 
 # Application definition
 INSTALLED_APPS = [
@@ -35,6 +28,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'apps.users',
     'apps.clips',
+    'apps.exercises',
     # Your apps
     # 'apps.routines',
     # 'apps.music',
@@ -45,7 +39,7 @@ MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
-    # 'django.middleware.common.CommonMiddleware',
+    'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
@@ -72,16 +66,12 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'audiofit.wsgi.application'
 
-import dj_database_url
-
 # Database
-# https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 DATABASES = {
-    'default': dj_database_url.config(
-        default=config('DATABASE_URL', default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}"),
-        conn_max_age=600,
-        conn_health_checks=True,
-    )
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
+    }
 }
 
 # Password validation
@@ -135,7 +125,7 @@ REST_FRAMEWORK = {
 # CORS Configuration
 CORS_ALLOWED_ORIGINS = config(
     'CORS_ALLOWED_ORIGINS',
-    default='http://localhost:5173,http://localhost:3000,https://audio-fit.vercel.app',
+    default='http://localhost:5173,http://localhost:3000',
     cast=lambda v: [s.strip() for s in v.split(',')]
 )
 
@@ -157,8 +147,4 @@ CORS_ALLOW_HEADERS = [
 CORS_EXPOSE_HEADERS = [
     'content-type',
     'x-csrftoken',
-]
-
-CSRF_TRUSTED_ORIGINS = [
-    'https://audio-fit.vercel.app',
 ]

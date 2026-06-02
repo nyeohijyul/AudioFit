@@ -74,6 +74,75 @@ def simplify_subtitles(subtitles):
     }
 
 
+def recommend_exercise_notes(exercises, answers):
+    api_key = config('GEMINI_API_KEY', default='')
+    if not api_key:
+        return {
+            'success': False,
+            'error': '',
+        }
+
+    compact_exercises = [
+        {
+            'id': exercise.get('id'),
+            'name': exercise.get('name'),
+            'ko_name': exercise.get('ko_name'),
+            'body_part': exercise.get('body_part'),
+            'target': exercise.get('target'),
+            'description': exercise.get('description'),
+        }
+        for exercise in exercises
+    ]
+
+    try:
+        client = OpenAI(base_url=GEMINI_BASE_URL, api_key=api_key)
+        completion = client.chat.completions.create(
+            model=GEMINI_MODEL,
+            messages=[
+                {
+                    'role': 'system',
+                    'content': (
+                        '너는 한국어 홈트레이닝 코치다. ExerciseDB 운동 데이터를 앱 화면에 표시할 '
+                        '짧고 쉬운 한국어 이름과 설명으로 다듬는다. 반드시 JSON 배열만 반환한다.'
+                    ),
+                },
+                {
+                    'role': 'user',
+                    'content': build_recommendation_prompt(compact_exercises, answers),
+                },
+            ],
+            temperature=0.35,
+            top_p=0.75,
+            max_tokens=2048,
+            stream=False,
+        )
+    except Exception as exc:
+        return {
+            'success': False,
+            'error': f'Gemini 추천 설명 보강에 실패했습니다: {str(exc)}',
+        }
+
+    content = completion.choices[0].message.content or ''
+    try:
+        notes = json.loads(extract_json(content))
+    except json.JSONDecodeError:
+        return {
+            'success': False,
+            'error': 'Gemini 추천 설명 응답을 JSON으로 해석하지 못했습니다.',
+        }
+
+    if not isinstance(notes, list):
+        return {
+            'success': False,
+            'error': 'Gemini 추천 설명 응답은 JSON 배열이어야 합니다.',
+        }
+
+    return {
+        'success': True,
+        'data': notes,
+    }
+
+
 def build_simplify_prompt(subtitles):
     compact_subtitles = [
         {
@@ -101,6 +170,20 @@ def build_simplify_prompt(subtitles):
         '  * 예시 2) 자막: "준비" (자막 1초 표시, 동작 시간 없음) → duration_sec: 1\n'
         '  * 만약 자막에 시간이 명시되지 않으면 자막 표시 시간만 사용\n\n'
         f'자막:\n{json.dumps(compact_subtitles, ensure_ascii=False)}'
+    )
+
+
+def build_recommendation_prompt(exercises, answers):
+    return (
+        '아래 ExerciseDB 운동 후보를 홈트 사용자에게 보여줄 문구로 다듬어 주세요.\n'
+        '조건:\n'
+        '- JSON 배열만 반환\n'
+        '- 입력된 id를 그대로 유지\n'
+        '- 각 항목 형식: {"id": "string", "ko_name": "한국어 운동명", "description": "40자 안팎의 쉬운 운동 설명"}\n'
+        '- 홈트레이닝/맨몸 운동 맥락으로 작성\n'
+        '- 무리한 의학적 조언이나 치료 표현은 피하기\n\n'
+        f'사용자 조건:\n{json.dumps(answers, ensure_ascii=False)}\n\n'
+        f'운동 후보:\n{json.dumps(exercises, ensure_ascii=False)}'
     )
 
 

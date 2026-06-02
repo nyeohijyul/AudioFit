@@ -13,7 +13,7 @@
  *    react-hook-form·Zod 검증, YouTube oEmbed API 연동, 구간 미리보기 플레이어 추가.
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import ScreenLayout from '../ScreenLayout';
 
 function formatMeta(meta) {
@@ -45,9 +45,23 @@ function NewRoutineScreen({
   onDeleteClip,
   onOpenSubtitleEditor,
   onSaveRoutine,
+  onMenuClick,
+  editingRoutine,
 }) {
   const [routineName, setRoutineName] = useState('');
   const hasClips = clips.length > 0;
+
+  // Sync editingRoutine name when it's loaded/changed
+  useEffect(() => {
+    if (editingRoutine) {
+      setRoutineName(editingRoutine.name || '');
+    } else {
+      setRoutineName('');
+    }
+  }, [editingRoutine]);
+
+  const allClipsSimplified = clips.every((clip) => clip.aiSimplified);
+  const isSaveDisabled = !routineName.trim() || !hasClips || !allClipsSimplified;
 
   const renderClipList = () => (
     <div className="clip-list">
@@ -59,8 +73,22 @@ function NewRoutineScreen({
             className="clip-main"
             onClick={() => onOpenSubtitleEditor && onOpenSubtitleEditor(clip.id)}
           >
-            <span>{clip.label}</span>
-            <span className="clip-meta">{formatMeta(clip.meta)}</span>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '2px', width: '100%' }}>
+              <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text1)' }}>{clip.label}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span className="clip-meta" style={{ fontSize: '0.72rem', color: 'var(--text2)' }}>{formatMeta(clip.meta)}</span>
+                <span style={{
+                  fontSize: '0.65rem',
+                  padding: '1px 5px',
+                  borderRadius: '4px',
+                  fontWeight: 'bold',
+                  background: clip.aiSimplified ? 'var(--green-light)' : 'var(--wine-light)',
+                  color: clip.aiSimplified ? 'var(--green)' : 'var(--wine)'
+                }}>
+                  {clip.aiSimplified ? '✓ AI 편집완료' : '⚠️ AI 편집필요'}
+                </span>
+              </div>
+            </div>
           </button>
           <button className="clip-delete" onClick={() => onDeleteClip && onDeleteClip(clip.id)}>삭제</button>
         </div>
@@ -71,8 +99,9 @@ function NewRoutineScreen({
   return (
     <ScreenLayout
       screenId="screen-new"
-      title="새 루틴 만들기"
-      subtitle="유튜브 링크를 붙여 넣으면 AI가 자동 분석해요"
+      title={editingRoutine ? "루틴 수정하기" : "새 루틴 만들기"}
+      subtitle={editingRoutine ? "기존 루틴의 영상과 자막을 수정할 수 있어요" : "유튜브 링크를 붙여 넣으면 AI가 자동 분석해요"}
+      onMenuClick={onMenuClick}
     >
       <div className="section">
         <div className="section-title-numbered">
@@ -117,6 +146,11 @@ function NewRoutineScreen({
           value={routineName}
           onChange={(e) => setRoutineName(e.target.value)}
         />
+        {!allClipsSimplified && hasClips && (
+          <div style={{ fontSize: '0.74rem', color: 'var(--wine)', fontWeight: 'bold', marginBottom: '12px', textAlign: 'center' }}>
+            ⚠️ 모든 영상의 AI 자막 편집이 완료되어야 루틴을 저장할 수 있습니다.
+          </div>
+        )}
         <button 
           type="button" 
           className="btn-wine"
@@ -126,9 +160,9 @@ function NewRoutineScreen({
               setRoutineName('');
             }
           }}
-          disabled={!routineName.trim() || !hasClips}
+          disabled={isSaveDisabled}
         >
-          ✔ 루틴 저장하고 보관함에 추가
+          {editingRoutine ? "✔ 루틴 수정 완료" : "✔ 루틴 저장하고 보관함에 추가"}
         </button>
       </div>
     </ScreenLayout>

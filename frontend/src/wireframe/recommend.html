@@ -1,0 +1,1470 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AudioFit — 맞춤 루틴 추천</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet"/>
+<style>
+/* ─────────────────────────────
+   DESIGN TOKENS  (기존 시스템 그대로)
+───────────────────────────── */
+:root {
+  --wine:        #8B1A2E;
+  --wine-dark:   #6a1222;
+  --wine-mid:    #c94a62;
+  --wine-light:  #f5e6e9;
+  --wine-xlight: #fdf3f5;
+  --bg:          #f7f5f2;
+  --surface:     #ffffff;
+  --surface2:    #f3f0ed;
+  --border:      rgba(0,0,0,0.08);
+  --border2:     rgba(0,0,0,0.13);
+  --text1:       #1a1614;
+  --text2:       #6b645e;
+  --text3:       #a09790;
+  --green:       #2d7a4f;
+  --green-light: #e6f4ec;
+  --amber:       #92610a;
+  --amber-light: #fdf3e3;
+  --radius-sm:   8px;
+  --radius-md:   12px;
+  --radius-lg:   18px;
+  --shadow:      0 2px 16px rgba(139,26,46,0.10);
+  --shadow-sm:   0 1px 4px rgba(0,0,0,0.06);
+  --shadow-md:   0 4px 20px rgba(0,0,0,0.10);
+}
+
+/* ─────────────────────────────
+   RESET & BASE
+───────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{font-size:16px;}
+body{
+  font-family:'Noto Sans KR','DM Sans',sans-serif;
+  background:var(--bg);
+  min-height:100vh;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  padding:2rem 1rem 4rem;
+}
+
+/* ─────────────────────────────
+   PAGE META
+───────────────────────────── */
+.page-title{text-align:center;margin-bottom:1.6rem;}
+.page-title h1{font-size:1.4rem;font-weight:700;color:var(--wine);letter-spacing:-0.02em;}
+.page-title p{font-size:0.8rem;color:var(--text2);margin-top:4px;}
+
+.screen-badge{
+  display:inline-flex;align-items:center;gap:6px;
+  background:var(--wine-light);color:var(--wine);
+  font-size:0.72rem;font-weight:700;
+  padding:5px 14px;border-radius:999px;
+  margin-bottom:1.4rem;letter-spacing:0.03em;
+}
+
+/* ─────────────────────────────
+   STEP NAV (외부 탐색용)
+───────────────────────────── */
+.step-nav{
+  display:flex;gap:6px;flex-wrap:wrap;
+  justify-content:center;margin-bottom:1.6rem;
+}
+.step-nav button{
+  font-family:inherit;font-size:0.74rem;font-weight:500;
+  padding:6px 14px;border-radius:999px;
+  border:1.5px solid var(--border2);
+  background:var(--surface);color:var(--text2);
+  cursor:pointer;transition:all .18s;
+}
+.step-nav button.active,
+.step-nav button:hover{background:var(--wine);color:#fff;border-color:var(--wine);}
+
+/* ─────────────────────────────
+   PHONE SHELL
+───────────────────────────── */
+.phone-wrap{width:375px;animation:fadeUp .35s ease both;}
+@keyframes fadeUp{
+  from{opacity:0;transform:translateY(16px);}
+  to  {opacity:1;transform:translateY(0);}
+}
+.phone-shell{
+  width:375px;background:var(--surface);
+  border-radius:44px;
+  border:2px solid rgba(0,0,0,0.12);
+  overflow:hidden;
+  box-shadow:0 20px 60px rgba(0,0,0,0.14),0 4px 12px rgba(0,0,0,0.08);
+  position:relative;
+}
+.notch{
+  position:absolute;top:0;left:50%;
+  transform:translateX(-50%);
+  width:120px;height:30px;background:#111;
+  border-radius:0 0 18px 18px;z-index:10;
+}
+.status-bar{
+  height:44px;background:var(--wine);
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 28px 0 24px;
+}
+.status-bar .time{font-size:13px;font-weight:700;color:#fff;font-family:'DM Sans',sans-serif;}
+.status-bar .icons{display:flex;gap:6px;align-items:center;}
+.status-bar .icons span{font-size:12px;color:rgba(255,255,255,0.85);}
+
+/* ─────────────────────────────
+   HEADER (기존 스타일 그대로)
+───────────────────────────── */
+.header{
+  background:var(--wine);
+  padding:16px 22px 18px;
+  flex-shrink:0;
+}
+.header-row{display:flex;justify-content:space-between;align-items:flex-start;}
+.header h2{font-size:1.05rem;font-weight:700;color:#fff;margin-bottom:3px;letter-spacing:-0.01em;}
+.header p{font-size:0.76rem;color:rgba(255,255,255,0.72);}
+
+/* ─────────────────────────────
+   TAB BAR (기존 스타일 그대로)
+───────────────────────────── */
+.tab-bar{
+  display:flex;border-top:1px solid var(--border);
+  background:var(--surface);padding:8px 0 16px;
+  flex-shrink:0;margin-top:auto;
+}
+.tab-item{
+  flex:1;display:flex;flex-direction:column;
+  align-items:center;gap:2px;
+  font-size:0.62rem;color:var(--text3);
+  cursor:pointer;padding:4px 0;transition:color .15s;
+}
+.tab-item .ti{font-size:1.1rem;transition:transform .15s;}
+.tab-item:hover .ti{transform:translateY(-2px);}
+.tab-item.active{color:var(--wine);font-weight:700;}
+.tab-item.active .ti{transform:scale(1.1);}
+
+/* ─────────────────────────────
+   SCREEN WRAPPER
+───────────────────────────── */
+.screen{
+  display:none;flex-direction:column;
+  min-height:740px;max-height:760px;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--surface);
+}
+.screen.active{display:flex;}
+.screen::-webkit-scrollbar{display:none;}
+
+/* ─────────────────────────────
+   ① 진행 스텝 바 (본문 상단 고정)
+───────────────────────────── */
+.progress-steps{
+  padding:14px 20px 10px;
+  background:var(--surface);
+  border-bottom:1px solid var(--border);
+  flex-shrink:0;
+}
+.steps-row{display:flex;align-items:center;gap:0;}
+.step-dot-wrap{
+  display:flex;flex-direction:column;
+  align-items:center;gap:4px;flex:1;
+  position:relative;
+}
+.step-dot{
+  width:24px;height:24px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:0.65rem;font-weight:700;
+  border:2px solid var(--border2);
+  background:var(--surface);color:var(--text3);
+  transition:all .25s;position:relative;z-index:1;
+}
+.step-dot.done{background:var(--wine);border-color:var(--wine);color:#fff;}
+.step-dot.active{background:var(--wine-light);border-color:var(--wine);color:var(--wine);}
+.step-dot-label{font-size:0.58rem;color:var(--text3);text-align:center;line-height:1.3;white-space:nowrap;}
+.step-dot-wrap.done .step-dot-label{color:var(--wine);font-weight:700;}
+.step-dot-wrap.active .step-dot-label{color:var(--wine);font-weight:700;}
+
+.step-line{
+  height:2px;background:var(--border2);
+  flex:1;margin:0 -2px;margin-bottom:18px;
+  position:relative;z-index:0;transition:background .3s;
+}
+.step-line.done{background:var(--wine);}
+
+/* ─────────────────────────────
+   ② 질문 카드 영역 (STEP 1~4)
+───────────────────────────── */
+.q-wrap{
+  flex:1;padding:16px 20px;
+  display:flex;flex-direction:column;gap:14px;
+  overflow-y:auto;
+}
+.q-wrap::-webkit-scrollbar{display:none;}
+
+/* 질문 버블 */
+.q-bubble{
+  background:var(--wine-xlight);
+  border:1.5px solid var(--wine-light);
+  border-radius:16px 16px 16px 4px;
+  padding:12px 14px;
+  max-width:82%;
+  animation:bubbleIn .3s ease both;
+}
+@keyframes bubbleIn{
+  from{opacity:0;transform:translateY(6px) scale(.97);}
+  to  {opacity:1;transform:translateY(0) scale(1);}
+}
+.q-bubble-meta{
+  font-size:0.64rem;color:var(--wine);font-weight:700;
+  margin-bottom:4px;display:flex;align-items:center;gap:4px;
+}
+.q-bubble-text{font-size:0.84rem;color:var(--text1);font-weight:500;line-height:1.55;}
+.q-bubble-sub{font-size:0.72rem;color:var(--text2);margin-top:3px;line-height:1.5;}
+
+/* 답변 옵션 카드들 */
+.options-grid{
+  display:flex;flex-direction:column;gap:7px;
+  animation:bubbleIn .3s .1s ease both;
+}
+.options-grid.two-col{
+  display:grid;grid-template-columns:1fr 1fr;gap:7px;
+}
+.option-card{
+  background:var(--surface2);
+  border:1.5px solid var(--border2);
+  border-radius:var(--radius-md);
+  padding:11px 13px;
+  cursor:pointer;
+  transition:all .16s;
+  display:flex;align-items:center;gap:10px;
+}
+.option-card:hover{border-color:var(--wine);background:var(--wine-xlight);}
+.option-card.selected{
+  border-color:var(--wine);
+  background:var(--wine-light);
+  box-shadow:0 0 0 3px rgba(139,26,46,0.08);
+}
+.option-icon{
+  font-size:1.3rem;flex-shrink:0;
+  width:36px;height:36px;
+  background:var(--surface);border-radius:10px;
+  display:flex;align-items:center;justify-content:center;
+  border:1px solid var(--border2);
+}
+.option-card.selected .option-icon{background:var(--wine-xlight);border-color:var(--wine-light);}
+.option-label{font-size:0.82rem;font-weight:700;color:var(--text1);}
+.option-desc{font-size:0.7rem;color:var(--text2);margin-top:1px;line-height:1.4;}
+.option-check{
+  margin-left:auto;width:18px;height:18px;border-radius:50%;
+  border:1.5px solid var(--border2);
+  display:flex;align-items:center;justify-content:center;
+  font-size:0.65rem;color:transparent;
+  transition:all .15s;flex-shrink:0;
+}
+.option-card.selected .option-check{
+  background:var(--wine);border-color:var(--wine);color:#fff;
+}
+
+/* 사용자 응답 버블 */
+.a-bubble{
+  align-self:flex-end;
+  background:var(--wine);
+  border-radius:16px 16px 4px 16px;
+  padding:10px 14px;
+  max-width:72%;
+  animation:bubbleIn .25s ease both;
+}
+.a-bubble-text{font-size:0.82rem;color:#fff;font-weight:500;line-height:1.5;}
+.a-bubble-emoji{font-size:0.9rem;margin-right:4px;}
+
+/* 다음 질문 버튼 */
+.btn-next{
+  width:100%;background:var(--wine);color:#fff;
+  border:none;border-radius:var(--radius-sm);
+  padding:13px 0;font-size:0.88rem;font-weight:700;
+  font-family:inherit;cursor:pointer;
+  transition:background .15s,transform .12s;
+  flex-shrink:0;
+  animation:bubbleIn .25s .15s ease both;
+}
+.btn-next:hover{background:var(--wine-dark);transform:translateY(-1px);}
+.btn-next:active{transform:scale(0.98);}
+.btn-next:disabled{background:var(--border2);cursor:not-allowed;transform:none;}
+
+/* ─────────────────────────────
+   ③ 로딩 화면 (STEP 5)
+───────────────────────────── */
+.loading-screen{
+  flex:1;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  padding:24px 28px;gap:0;
+}
+.loading-spinner{
+  width:64px;height:64px;position:relative;margin-bottom:20px;
+}
+.spinner-ring{
+  position:absolute;inset:0;
+  border-radius:50%;
+  border:4px solid var(--wine-light);
+  border-top-color:var(--wine);
+  animation:spin 1s linear infinite;
+}
+.spinner-ring:nth-child(2){
+  inset:8px;border-color:transparent;
+  border-top-color:var(--wine-mid);
+  animation-duration:0.7s;animation-direction:reverse;
+}
+@keyframes spin{to{transform:rotate(360deg);}}
+.loading-icon{
+  position:absolute;inset:0;
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.4rem;
+}
+.loading-title{
+  font-size:0.95rem;font-weight:700;
+  color:var(--text1);margin-bottom:6px;letter-spacing:-0.01em;
+}
+.loading-sub{font-size:0.76rem;color:var(--text2);text-align:center;line-height:1.6;margin-bottom:20px;}
+
+.loading-steps{
+  width:100%;display:flex;flex-direction:column;gap:8px;
+  margin-bottom:20px;
+}
+.loading-step{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 12px;border-radius:var(--radius-sm);
+  background:var(--surface2);border:1px solid var(--border);
+  font-size:0.76rem;color:var(--text2);
+  transition:all .3s;
+}
+.loading-step.done{
+  background:var(--green-light);border-color:rgba(45,122,79,0.2);
+  color:var(--green);font-weight:500;
+}
+.loading-step.active{
+  background:var(--wine-xlight);border-color:var(--wine-light);
+  color:var(--wine);font-weight:500;
+}
+.loading-step-icon{font-size:0.9rem;flex-shrink:0;}
+.loading-step-bar{
+  margin-left:auto;width:40px;height:3px;
+  background:var(--border);border-radius:999px;
+  overflow:hidden;
+}
+.loading-step-fill{
+  height:100%;background:var(--wine);border-radius:999px;
+  width:0%;transition:width .4s ease;
+}
+.loading-step.done .loading-step-bar{background:var(--green-light);}
+.loading-step.done .loading-step-fill{background:var(--green);width:100%;}
+
+.filter-summary{
+  width:100%;
+  background:var(--wine-xlight);
+  border:1.5px solid var(--wine-light);
+  border-radius:var(--radius-md);
+  padding:12px 14px;
+}
+.filter-summary-title{
+  font-size:0.68rem;font-weight:700;color:var(--wine);
+  text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;
+}
+.filter-chips{display:flex;flex-wrap:wrap;gap:5px;}
+.filter-chip{
+  font-size:0.69rem;font-weight:700;
+  padding:4px 9px;border-radius:999px;
+  background:var(--wine-light);color:var(--wine);
+}
+
+/* ─────────────────────────────
+   ④ 결과 화면 (STEP 6)
+───────────────────────────── */
+.result-screen{flex:1;overflow-y:auto;}
+.result-screen::-webkit-scrollbar{display:none;}
+
+/* 운동 정보 요약 헤더 */
+.result-summary{
+  padding:14px 20px 12px;
+  background:var(--wine-xlight);
+  border-bottom:1px solid var(--wine-light);
+  flex-shrink:0;
+}
+.result-summary-row{
+  display:flex;align-items:center;
+  justify-content:space-between;margin-bottom:8px;
+}
+.result-summary-title{
+  font-size:0.7rem;font-weight:700;color:var(--wine);
+  text-transform:uppercase;letter-spacing:0.06em;
+}
+.result-edit-btn{
+  font-size:0.7rem;color:var(--wine);font-weight:700;
+  background:none;border:none;cursor:pointer;
+  font-family:inherit;
+}
+.result-chips{display:flex;flex-wrap:wrap;gap:5px;}
+.result-chip{
+  font-size:0.68rem;font-weight:700;padding:3px 9px;
+  border-radius:999px;background:var(--wine-light);color:var(--wine);
+}
+
+/* 운동 동작 목록 섹션 */
+.exercise-section{
+  padding:14px 20px 0;
+  flex-shrink:0;
+}
+.section-title-row{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:10px;
+}
+.section-title{
+  font-size:0.68rem;font-weight:700;color:var(--text3);
+  text-transform:uppercase;letter-spacing:0.07em;
+}
+.section-count{
+  font-size:0.68rem;color:var(--wine);font-weight:700;
+  background:var(--wine-light);padding:2px 8px;border-radius:999px;
+}
+
+/* 운동 동작 카드 (ExerciseDB 기반) */
+.exercise-card{
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:var(--radius-md);
+  padding:11px 13px;margin-bottom:8px;
+  cursor:pointer;transition:all .15s;
+  display:flex;gap:10px;align-items:flex-start;
+}
+.exercise-card:hover{border-color:var(--wine);box-shadow:var(--shadow-sm);}
+.exercise-card.selected{
+  border-color:var(--wine);background:var(--wine-xlight);
+}
+.exercise-thumb{
+  width:48px;height:48px;border-radius:8px;
+  background:linear-gradient(135deg,var(--wine-light) 0%,var(--wine-xlight) 100%);
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.4rem;flex-shrink:0;
+  border:1px solid var(--wine-light);
+}
+.exercise-info{flex:1;min-width:0;}
+.exercise-name{
+  font-size:0.82rem;font-weight:700;color:var(--text1);
+  margin-bottom:3px;line-height:1.3;
+}
+.exercise-meta-row{
+  display:flex;gap:5px;align-items:center;flex-wrap:wrap;
+  margin-bottom:4px;
+}
+.ex-tag{
+  font-size:0.62rem;font-weight:700;padding:2px 6px;
+  border-radius:4px;background:var(--surface);
+  color:var(--text2);border:1px solid var(--border2);
+}
+.ex-tag.muscle{background:var(--amber-light);color:var(--amber);border-color:rgba(146,97,10,0.2);}
+.ex-tag.equip{background:var(--green-light);color:var(--green);border-color:rgba(45,122,79,0.2);}
+.exercise-desc{
+  font-size:0.7rem;color:var(--text2);line-height:1.45;
+  display:-webkit-box;-webkit-line-clamp:2;
+  -webkit-box-orient:vertical;overflow:hidden;
+}
+.exercise-select-btn{
+  width:24px;height:24px;border-radius:50%;
+  border:1.5px solid var(--border2);
+  background:var(--surface);
+  display:flex;align-items:center;justify-content:center;
+  font-size:0.7rem;color:transparent;
+  transition:all .15s;flex-shrink:0;margin-top:2px;
+}
+.exercise-card.selected .exercise-select-btn{
+  background:var(--wine);border-color:var(--wine);color:#fff;
+}
+
+/* 유튜브 영상 섹션 */
+.yt-section{
+  padding:14px 20px 8px;
+  border-top:1px solid var(--border);
+}
+.yt-selected-exercise{
+  display:flex;align-items:center;gap:8px;
+  background:var(--wine-xlight);border:1.5px solid var(--wine-light);
+  border-radius:var(--radius-sm);padding:8px 11px;
+  margin-bottom:10px;
+}
+.yt-sel-icon{font-size:1rem;}
+.yt-sel-name{font-size:0.78rem;font-weight:700;color:var(--wine);}
+.yt-sel-desc{font-size:0.68rem;color:var(--text2);}
+.yt-search-status{
+  display:flex;align-items:center;gap:7px;
+  font-size:0.72rem;color:var(--text2);margin-bottom:10px;
+}
+.yt-spinner{
+  width:14px;height:14px;border-radius:50%;
+  border:2px solid var(--wine-light);border-top-color:var(--wine);
+  animation:spin .8s linear infinite;flex-shrink:0;
+}
+.yt-done-icon{
+  font-size:0.8rem;color:var(--green);flex-shrink:0;
+}
+
+/* 유튜브 영상 카드 3개 */
+.yt-card{
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:var(--radius-md);margin-bottom:8px;
+  overflow:hidden;cursor:pointer;transition:all .15s;
+}
+.yt-card:hover{border-color:var(--wine-mid);box-shadow:var(--shadow-sm);}
+.yt-card.top-pick{border-color:var(--wine);border-width:1.5px;}
+.yt-thumb{
+  width:100%;height:106px;
+  display:flex;align-items:center;justify-content:center;
+  position:relative;overflow:hidden;
+}
+.yt-thumb-bg{
+  position:absolute;inset:0;
+  display:flex;align-items:center;justify-content:center;
+  font-size:2.5rem;
+}
+.yt-play-btn{
+  position:relative;z-index:1;
+  width:38px;height:38px;border-radius:50%;
+  background:rgba(139,26,46,0.88);
+  display:flex;align-items:center;justify-content:center;
+  color:#fff;font-size:0.9rem;
+  box-shadow:0 2px 10px rgba(0,0,0,0.25);
+}
+.yt-top-badge{
+  position:absolute;top:8px;left:8px;
+  font-size:0.62rem;font-weight:700;
+  background:var(--wine);color:#fff;
+  padding:3px 8px;border-radius:999px;z-index:1;
+}
+.yt-duration{
+  position:absolute;bottom:8px;right:8px;
+  font-size:0.65rem;font-weight:700;font-family:'DM Sans',sans-serif;
+  background:rgba(0,0,0,0.72);color:#fff;
+  padding:2px 6px;border-radius:4px;z-index:1;
+}
+.yt-info{padding:10px 12px 11px;}
+.yt-title{
+  font-size:0.8rem;font-weight:700;color:var(--text1);
+  line-height:1.4;margin-bottom:4px;
+  display:-webkit-box;-webkit-line-clamp:2;
+  -webkit-box-orient:vertical;overflow:hidden;
+}
+.yt-channel-row{
+  display:flex;align-items:center;gap:6px;margin-bottom:4px;
+}
+.yt-channel{font-size:0.7rem;color:var(--text2);}
+.yt-verified{font-size:0.62rem;color:var(--green);font-weight:700;}
+.yt-stats-row{
+  display:flex;gap:8px;align-items:center;flex-wrap:wrap;
+}
+.yt-stat{
+  font-size:0.66rem;color:var(--text3);
+  display:flex;align-items:center;gap:2px;
+}
+.yt-add-btn{
+  display:block;width:calc(100% - 24px);
+  margin:0 12px 12px;
+  background:transparent;color:var(--wine);
+  border:1.5px solid var(--wine);border-radius:6px;
+  padding:7px 0;font-size:0.78rem;font-weight:700;
+  font-family:inherit;cursor:pointer;
+  transition:all .15s;text-align:center;
+}
+.yt-add-btn:hover{background:var(--wine-light);}
+.yt-add-btn.added{background:var(--green-light);color:var(--green);border-color:var(--green);}
+
+/* 루틴 저장 버튼 */
+.save-section{
+  padding:14px 20px 16px;
+  border-top:1px solid var(--border);
+  flex-shrink:0;
+  background:var(--surface);
+}
+.routine-name-input{
+  width:100%;border:1.5px solid var(--border2);
+  border-radius:var(--radius-sm);padding:10px 12px;
+  font-size:0.84rem;font-family:inherit;
+  color:var(--text1);background:var(--surface2);
+  margin-bottom:10px;outline:none;transition:border-color .15s;
+}
+.routine-name-input:focus{border-color:var(--wine);}
+.save-row{display:flex;gap:8px;}
+.btn-save{
+  flex:1;background:var(--wine);color:#fff;
+  border:none;border-radius:var(--radius-sm);
+  padding:13px 0;font-size:0.88rem;font-weight:700;
+  font-family:inherit;cursor:pointer;
+  transition:background .15s,transform .12s;
+}
+.btn-save:hover{background:var(--wine-dark);transform:translateY(-1px);}
+.btn-share{
+  width:46px;background:var(--surface2);
+  border:1.5px solid var(--border2);
+  border-radius:var(--radius-sm);
+  display:flex;align-items:center;justify-content:center;
+  font-size:1rem;cursor:pointer;
+  transition:all .15s;
+}
+.btn-share:hover{border-color:var(--wine);background:var(--wine-light);}
+
+/* ─────────────────────────────
+   TOAST
+───────────────────────────── */
+.toast{
+  position:fixed;bottom:4.5rem;left:50%;
+  transform:translateX(-50%) translateY(12px);
+  background:var(--text1);color:#fff;
+  font-size:0.78rem;font-weight:500;
+  padding:9px 20px;border-radius:999px;
+  opacity:0;pointer-events:none;
+  transition:all .25s;white-space:nowrap;z-index:999;
+}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* ─────────────────────────────
+   ANNOTATION BOX
+───────────────────────────── */
+.annotation{
+  width:375px;margin-top:1.8rem;
+  background:var(--surface);border-radius:var(--radius-md);
+  border:1px solid var(--border2);padding:16px 18px;
+  box-shadow:var(--shadow-sm);
+}
+.annotation h3{font-size:0.78rem;font-weight:700;color:var(--wine);margin-bottom:10px;}
+.anno-row{display:flex;gap:8px;margin-bottom:7px;}
+.anno-row:last-child{margin-bottom:0;}
+.anno-dot{width:6px;height:6px;border-radius:50%;background:var(--wine);flex-shrink:0;margin-top:5px;}
+.anno-text{font-size:0.75rem;color:var(--text2);line-height:1.55;}
+.anno-text strong{color:var(--text1);font-weight:700;}
+
+/* ─────────────────────────────
+   EMPTY / SKELETON
+───────────────────────────── */
+.skeleton{
+  background:linear-gradient(90deg,var(--surface2) 25%,var(--border) 50%,var(--surface2) 75%);
+  background-size:200% 100%;
+  animation:shimmer 1.4s infinite;
+  border-radius:6px;
+}
+@keyframes shimmer{to{background-position:-200% 0;}}
+</style>
+</head>
+<body>
+
+<div class="page-title">
+  <h1>🎙 AudioFit</h1>
+  <p>나만의 홈트 라디오 — UI 와이어프레임</p>
+</div>
+<div class="screen-badge">📱 화면 4 — 맞춤 루틴 추천</div>
+
+<!-- 외부 단계 탐색 -->
+<div class="step-nav">
+  <button class="active" onclick="goStep(1,this)">① 목표 선택</button>
+  <button onclick="goStep(2,this)">② 신체·시간</button>
+  <button onclick="goStep(3,this)">③ 레벨·부위</button>
+  <button onclick="goStep(4,this)">④ 장비·빈도</button>
+  <button onclick="goStep(5,this)">⑤ AI 분석중</button>
+  <button onclick="goStep(6,this)">⑥ 결과 보기</button>
+</div>
+
+<!-- ═══════════ PHONE ═══════════ -->
+<div class="phone-wrap">
+<div class="phone-shell">
+  <div class="notch"></div>
+
+  <!-- STATUS BAR -->
+  <div class="status-bar">
+    <span class="time">9:41</span>
+    <div class="icons"><span>●●●</span><span>WiFi</span><span>🔋</span></div>
+  </div>
+
+  <!-- HEADER (기존 그대로) -->
+  <div class="header">
+    <div class="header-row">
+      <div>
+        <h2>🎯 맞춤 루틴 추천</h2>
+        <p>몇 가지 질문으로 딱 맞는 홈트를 찾아드려요</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ STEP 1 : 운동 목표 ══ -->
+  <div class="screen active" id="screen-1">
+    <!-- 진행 바 -->
+    <div class="progress-steps">
+      <div class="steps-row">
+        <div class="step-dot-wrap active"><div class="step-dot active">1</div><div class="step-dot-label">목표</div></div>
+        <div class="step-line"></div>
+        <div class="step-dot-wrap"><div class="step-dot">2</div><div class="step-dot-label">신체</div></div>
+        <div class="step-line"></div>
+        <div class="step-dot-wrap"><div class="step-dot">3</div><div class="step-dot-label">레벨</div></div>
+        <div class="step-line"></div>
+        <div class="step-dot-wrap"><div class="step-dot">4</div><div class="step-dot-label">장비</div></div>
+        <div class="step-line"></div>
+        <div class="step-dot-wrap"><div class="step-dot">🤖</div><div class="step-dot-label">분석</div></div>
+        <div class="step-line"></div>
+        <div class="step-dot-wrap"><div class="step-dot">✦</div><div class="step-dot-label">결과</div></div>
+      </div>
+    </div>
+
+    <div class="q-wrap">
+      <div class="q-bubble">
+        <div class="q-bubble-meta">🤖 AudioFit AI</div>
+        <div class="q-bubble-text">지금 가장 원하는 운동 목표가 뭔가요? 하나만 골라주세요!</div>
+        <div class="q-bubble-sub">ExerciseDB 데이터에서 목표에 맞는 동작들을 필터링할게요.</div>
+      </div>
+
+      <div class="options-grid">
+        <div class="option-card" onclick="selectOption(this, 'goal-1')">
+          <div class="option-icon">🔥</div>
+          <div>
+            <div class="option-label">지방 태우기</div>
+            <div class="option-desc">심폐 강화 & 칼로리 소모</div>
+          </div>
+          <div class="option-check">✓</div>
+        </div>
+        <div class="option-card" onclick="selectOption(this, 'goal-1')">
+          <div class="option-icon">💪</div>
+          <div>
+            <div class="option-label">근육 키우기</div>
+            <div class="option-desc">맨몸 근력 운동 중심</div>
+          </div>
+          <div class="option-check">✓</div>
+        </div>
+        <div class="option-card" onclick="selectOption(this, 'goal-1')">
+          <div class="option-icon">🧘</div>
+          <div>
+            <div class="option-label">유연성 & 스트레칭</div>
+            <div class="option-desc">관절 가동 범위 향상</div>
+          </div>
+          <div class="option-check">✓</div>
+        </div>
+        <div class="option-card" onclick="selectOption(this, 'goal-1')">
+          <div class="option-icon">⚡</div>
+          <div>
+            <div class="option-label">체력 & 지구력</div>
+            <div class="option-desc">전반적 건강 유지</div>
+          </div>
+          <div class="option-check">✓</div>
+        </div>
+        <div class="option-card" onclick="selectOption(this, 'goal-1')">
+          <div class="option-icon">🎯</div>
+          <div>
+            <div class="option-label">자세 교정 & 코어</div>
+            <div class="option-desc">허리 통증 예방 & 척추 안정화</div>
+          </div>
+          <div class="option-check">✓</div>
+        </div>
+      </div>
+
+      <button class="btn-next" id="btn-1" disabled onclick="goStep(2, document.querySelector('.step-nav button:nth-child(2)'))">다음 질문 →</button>
+    </div>
+
+    <!-- TAB BAR -->
+    <div class="tab-bar">
+      <div class="tab-item"><span class="ti">🏠</span>홈</div>
+      <div class="tab-item"><span class="ti">✚</span>새루틴</div>
+      <div class="tab-item active"><span class="ti">🎯</span>추천</div>
+      <div class="tab-item"><span class="ti">📁</span>보관함</div>
+      <div class="tab-item"><span class="ti">👤</span>내정보</div>
+    </div>
+  </div>
+
+  <!-- ══ STEP 2 : 신체 & 시간 ══ -->
+  <div class="screen" id="screen-2">
+    <div class="progress-steps">
+      <div class="steps-row">
+        <div class="step-dot-wrap done"><div class="step-dot done">✓</div><div class="step-dot-label">목표</div></div>
+        <div class="step-line done"></div>
+        <div class="step-dot-wrap active"><div class="step-dot active">2</div><div class="step-dot-label">신체</div></div>
+        <div class="step-line"></div>
+        <div class="step-dot-wrap"><div class="step-dot">3</div><div class="step-dot-label">레벨</div></div>
+        <div class="step-line"></div>
+        <div class="step-dot-wrap"><div class="step-dot">4</div><div class="step-dot-label">장비</div></div>
+        <div class="step-line"></div>
+        <div class="step-dot-wrap"><div class="step-dot">🤖</div><div class="step-dot-label">분석</div></div>
+        <div class="step-line"></div>
+        <div class="step-dot-wrap"><div class="step-dot">✦</div><div class="step-dot-label">결과</div></div>
+      </div>
+    </div>
+
+    <div class="q-wrap">
+      <!-- 이전 답변 버블 -->
+      <div class="a-bubble" style="animation-delay:0s;">
+        <div class="a-bubble-text"><span class="a-bubble-emoji">🔥</span>지방 태우기</div>
+      </div>
+
+      <!-- 질문 2-1 -->
+      <div class="q-bubble" style="animation-delay:.1s;">
+        <div class="q-bubble-meta">🤖 AudioFit AI</div>
+        <div class="q-bubble-text">하루에 운동할 수 있는 시간이 얼마나 되나요?</div>
+        <div class="q-bubble-sub">무리하지 않는 루틴을 만들어 드릴게요 😊</div>
+      </div>
+
+      <div class="options-grid two-col" id="time-options">
+        <div class="option-card" onclick="selectOption(this,'time',true)">
+          <div style="text-align:center;width:100%;">
+            <div style="font-size:1.2rem;margin-bottom:3px;">⚡</div>
+            <div class="option-label">10분 이하</div>
+            <div class="option-desc">짧고 강하게</div>
+          </div>
+        </div>
+        <div class="option-card" onclick="selectOption(this,'time',true)">
+          <div style="text-align:center;width:100%;">
+            <div style="font-size:1.2rem;margin-bottom:3px;">🕐</div>
+            <div class="option-label">15 ~ 20분</div>
+            <div class="option-desc">딱 좋은 길이</div>
+          </div>
+        </div>
+        <div class="option-card" onclick="selectOption(this,'time',true)">
+          <div style="text-align:center;width:100%;">
+            <div style="font-size:1.2rem;margin-bottom:3px;">🕑</div>
+            <div class="option-label">30 ~ 40분</div>
+            <div class="option-desc">충분한 운동량</div>
+          </div>
+        </div>
+        <div class="option-card" onclick="selectOption(this,'time',true)">
+          <div style="text-align:center;width:100%;">
+            <div style="font-size:1.2rem;margin-bottom:3px;">🕒</div>
+            <div class="option-label">1시간 이상</div>
+            <div class="option-desc">전문 트레이닝</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 질문 2-2 -->
+      <div class="q-bubble" style="animation-delay:.15s;">
+        <div class="q-bubble-meta">🤖 AudioFit AI</div>
+        <div class="q-bubble-text">지금 신체적으로 불편하거나 아픈 부위가 있나요?</div>
+        <div class="q-bubble-sub">해당 부위를 제외한 동작으로 구성할게요.</div>
+      </div>
+
+      <div class="options-grid two-col">
+        <div class="option-card" onclick="selectOption(this,'pain',true)">
+          <div style="text-align:center;width:100%;"><div style="font-size:1.1rem;margin-bottom:2px;">🙅</div><div class="option-label" style="font-size:0.78rem;">없음</div></div>
+        </div>
+        <div class="option-card" onclick="selectOption(this,'pain',true)">
+          <div style="text-align:center;width:100%;"><div style="font-size:1.1rem;margin-bottom:2px;">🦵</div><div class="option-label" style="font-size:0.78rem;">무릎</div></div>
+        </div>
+        <div class="option-card" onclick="selectOption(this,'pain',true)">
+          <div style="text-align:center;width:100%;"><div style="font-size:1.1rem;margin-bottom:2px;">🔙</div><div class="option-label" style="font-size:0.78rem;">허리</div></div>
+        </div>
+        <div class="option-card" onclick="selectOption(this,'pain',true)">
+          <div style="text-align:center;width:100%;"><div style="font-size:1.1rem;margin-bottom:2px;">💪</div><div class="option-label" style="font-size:0.78rem;">어깨/손목</div></div>
+        </div>
+      </div>
+
+      <button class="btn-next" onclick="goStep(3, document.querySelector('.step-nav button:nth-child(3)'))">다음 질문 →</button>
+    </div>
+
+    <div class="tab-bar">
+      <div class="tab-item"><span class="ti">🏠</span>홈</div>
+      <div class="tab-item"><span class="ti">✚</span>새루틴</div>
+      <div class="tab-item active"><span class="ti">🎯</span>추천</div>
+      <div class="tab-item"><span class="ti">📁</span>보관함</div>
+      <div class="tab-item"><span class="ti">👤</span>내정보</div>
+    </div>
+  </div>
+
+  <!-- ══ STEP 3 : 레벨 & 운동 부위 ══ -->
+  <div class="screen" id="screen-3">
+    <div class="progress-steps">
+      <div class="steps-row">
+        <div class="step-dot-wrap done"><div class="step-dot done">✓</div><div class="step-dot-label">목표</div></div>
+        <div class="step-line done"></div>
+        <div class="step-dot-wrap done"><div class="step-dot done">✓</div><div class="step-dot-label">신체</div></div>
+        <div class="step-line done"></div>
+        <div class="step-dot-wrap active"><div class="step-dot active">3</div><div class="step-dot-label">레벨</div></div>
+        <div class="step-line"></div>
+        <div class="step-dot-wrap"><div class="step-dot">4</div><div class="step-dot-label">장비</div></div>
+        <div class="step-line"></div>
+        <div class="step-dot-wrap"><div class="step-dot">🤖</div><div class="step-dot-label">분석</div></div>
+        <div class="step-line"></div>
+        <div class="step-dot-wrap"><div class="step-dot">✦</div><div class="step-dot-label">결과</div></div>
+      </div>
+    </div>
+
+    <div class="q-wrap">
+      <div class="a-bubble"><div class="a-bubble-text"><span class="a-bubble-emoji">🕑</span>30~40분 · 무릎 조심</div></div>
+
+      <!-- 레벨 -->
+      <div class="q-bubble">
+        <div class="q-bubble-meta">🤖 AudioFit AI</div>
+        <div class="q-bubble-text">현재 운동 경험은 어느 정도인가요?</div>
+        <div class="q-bubble-sub">ExerciseDB difficulty 필드로 필터링해요.</div>
+      </div>
+      <div class="options-grid">
+        <div class="option-card" onclick="selectOption(this,'level')">
+          <div class="option-icon">🌱</div>
+          <div><div class="option-label">완전 초보</div><div class="option-desc">운동을 거의 안 해봤어요</div></div>
+          <div class="option-check">✓</div>
+        </div>
+        <div class="option-card" onclick="selectOption(this,'level')">
+          <div class="option-icon">🔥</div>
+          <div><div class="option-label">중급자</div><div class="option-desc">가끔 운동해요</div></div>
+          <div class="option-check">✓</div>
+        </div>
+        <div class="option-card" onclick="selectOption(this,'level')">
+          <div class="option-icon">💪</div>
+          <div><div class="option-label">고급자</div><div class="option-desc">꾸준히 운동하고 있어요</div></div>
+          <div class="option-check">✓</div>
+        </div>
+      </div>
+
+      <!-- 부위 -->
+      <div class="q-bubble">
+        <div class="q-bubble-meta">🤖 AudioFit AI</div>
+        <div class="q-bubble-text">오늘 집중하고 싶은 신체 부위가 있나요? (복수 선택 가능)</div>
+        <div class="q-bubble-sub">ExerciseDB bodyPart 필드 기준으로 동작을 고를게요.</div>
+      </div>
+      <div class="options-grid two-col">
+        <div class="option-card" onclick="toggleMulti(this)">
+          <div style="text-align:center;width:100%;"><div style="font-size:1.1rem;margin-bottom:2px;">🫀</div><div class="option-label" style="font-size:0.76rem;">가슴 · 팔</div></div>
+        </div>
+        <div class="option-card" onclick="toggleMulti(this)">
+          <div style="text-align:center;width:100%;"><div style="font-size:1.1rem;margin-bottom:2px;">🔙</div><div class="option-label" style="font-size:0.76rem;">등 · 허리</div></div>
+        </div>
+        <div class="option-card" onclick="toggleMulti(this)">
+          <div style="text-align:center;width:100%;"><div style="font-size:1.1rem;margin-bottom:2px;">🦵</div><div class="option-label" style="font-size:0.76rem;">다리 · 엉덩이</div></div>
+        </div>
+        <div class="option-card" onclick="toggleMulti(this)">
+          <div style="text-align:center;width:100%;"><div style="font-size:1.1rem;margin-bottom:2px;">🎯</div><div class="option-label" style="font-size:0.76rem;">코어 · 복근</div></div>
+        </div>
+        <div class="option-card" onclick="toggleMulti(this)">
+          <div style="text-align:center;width:100%;"><div style="font-size:1.1rem;margin-bottom:2px;">🌐</div><div class="option-label" style="font-size:0.76rem;">전신</div></div>
+        </div>
+        <div class="option-card" onclick="toggleMulti(this)">
+          <div style="text-align:center;width:100%;"><div style="font-size:1.1rem;margin-bottom:2px;">💨</div><div class="option-label" style="font-size:0.76rem;">유산소</div></div>
+        </div>
+      </div>
+
+      <button class="btn-next" onclick="goStep(4, document.querySelector('.step-nav button:nth-child(4)'))">다음 질문 →</button>
+    </div>
+
+    <div class="tab-bar">
+      <div class="tab-item"><span class="ti">🏠</span>홈</div>
+      <div class="tab-item"><span class="ti">✚</span>새루틴</div>
+      <div class="tab-item active"><span class="ti">🎯</span>추천</div>
+      <div class="tab-item"><span class="ti">📁</span>보관함</div>
+      <div class="tab-item"><span class="ti">👤</span>내정보</div>
+    </div>
+  </div>
+
+  <!-- ══ STEP 4 : 장비 & 운동 빈도 ══ -->
+  <div class="screen" id="screen-4">
+    <div class="progress-steps">
+      <div class="steps-row">
+        <div class="step-dot-wrap done"><div class="step-dot done">✓</div><div class="step-dot-label">목표</div></div>
+        <div class="step-line done"></div>
+        <div class="step-dot-wrap done"><div class="step-dot done">✓</div><div class="step-dot-label">신체</div></div>
+        <div class="step-line done"></div>
+        <div class="step-dot-wrap done"><div class="step-dot done">✓</div><div class="step-dot-label">레벨</div></div>
+        <div class="step-line done"></div>
+        <div class="step-dot-wrap active"><div class="step-dot active">4</div><div class="step-dot-label">장비</div></div>
+        <div class="step-line"></div>
+        <div class="step-dot-wrap"><div class="step-dot">🤖</div><div class="step-dot-label">분석</div></div>
+        <div class="step-line"></div>
+        <div class="step-dot-wrap"><div class="step-dot">✦</div><div class="step-dot-label">결과</div></div>
+      </div>
+    </div>
+
+    <div class="q-wrap">
+      <div class="a-bubble"><div class="a-bubble-text"><span class="a-bubble-emoji">🌱</span>초보자 · 코어 & 전신</div></div>
+
+      <!-- 장비 -->
+      <div class="q-bubble">
+        <div class="q-bubble-meta">🤖 AudioFit AI</div>
+        <div class="q-bubble-text">집에 있는 운동 도구를 선택해 주세요. (복수 선택 가능)</div>
+        <div class="q-bubble-sub">맨몸 운동 위주로 추천해 드리지만, 도구가 있다면 더 다양하게 구성해요.</div>
+      </div>
+      <div class="options-grid two-col">
+        <div class="option-card selected" onclick="toggleMulti(this)">
+          <div style="text-align:center;width:100%;"><div style="font-size:1.1rem;margin-bottom:2px;">🙌</div><div class="option-label" style="font-size:0.76rem;">맨몸만</div></div>
+        </div>
+        <div class="option-card" onclick="toggleMulti(this)">
+          <div style="text-align:center;width:100%;"><div style="font-size:1.1rem;margin-bottom:2px;">🎀</div><div class="option-label" style="font-size:0.76rem;">밴드</div></div>
+        </div>
+        <div class="option-card" onclick="toggleMulti(this)">
+          <div style="text-align:center;width:100%;"><div style="font-size:1.1rem;margin-bottom:2px;">🏋️</div><div class="option-label" style="font-size:0.76rem;">덤벨</div></div>
+        </div>
+        <div class="option-card" onclick="toggleMulti(this)">
+          <div style="text-align:center;width:100%;"><div style="font-size:1.1rem;margin-bottom:2px;">🟦</div><div class="option-label" style="font-size:0.76rem;">요가 매트</div></div>
+        </div>
+      </div>
+
+      <!-- 빈도 -->
+      <div class="q-bubble">
+        <div class="q-bubble-meta">🤖 AudioFit AI</div>
+        <div class="q-bubble-text">일주일에 몇 번 운동하고 싶으세요?</div>
+        <div class="q-bubble-sub">루틴의 강도와 회복 일수를 조절해요.</div>
+      </div>
+      <div class="options-grid two-col">
+        <div class="option-card" onclick="selectOption(this,'freq',true)">
+          <div style="text-align:center;width:100%;"><div class="option-label">주 1~2회</div><div class="option-desc">가볍게 시작</div></div>
+        </div>
+        <div class="option-card" onclick="selectOption(this,'freq',true)">
+          <div style="text-align:center;width:100%;"><div class="option-label">주 3~4회</div><div class="option-desc">꾸준하게</div></div>
+        </div>
+        <div class="option-card" onclick="selectOption(this,'freq',true)">
+          <div style="text-align:center;width:100%;"><div class="option-label">주 5~6회</div><div class="option-desc">집중 트레이닝</div></div>
+        </div>
+        <div class="option-card" onclick="selectOption(this,'freq',true)">
+          <div style="text-align:center;width:100%;"><div class="option-label">매일</div><div class="option-desc">최대한 자주</div></div>
+        </div>
+      </div>
+
+      <button class="btn-next" onclick="goStep(5, document.querySelector('.step-nav button:nth-child(5)'))">🤖 AI 루틴 분석 시작 →</button>
+    </div>
+
+    <div class="tab-bar">
+      <div class="tab-item"><span class="ti">🏠</span>홈</div>
+      <div class="tab-item"><span class="ti">✚</span>새루틴</div>
+      <div class="tab-item active"><span class="ti">🎯</span>추천</div>
+      <div class="tab-item"><span class="ti">📁</span>보관함</div>
+      <div class="tab-item"><span class="ti">👤</span>내정보</div>
+    </div>
+  </div>
+
+  <!-- ══ STEP 5 : 로딩 (AI 분석 & 유튜브 검색) ══ -->
+  <div class="screen" id="screen-5">
+    <div class="loading-screen">
+      <div class="loading-spinner">
+        <div class="spinner-ring"></div>
+        <div class="spinner-ring"></div>
+        <div class="loading-icon">🤖</div>
+      </div>
+      <div class="loading-title">루틴을 만들고 있어요…</div>
+      <div class="loading-sub">입력하신 조건으로 ExerciseDB에서<br/>최적의 홈트 동작을 찾고 있어요</div>
+
+      <div class="loading-steps">
+        <div class="loading-step done" id="ls-1">
+          <span class="loading-step-icon">✅</span>
+          조건 분석 완료 (목표·레벨·부위·장비)
+          <div class="loading-step-bar"><div class="loading-step-fill"></div></div>
+        </div>
+        <div class="loading-step done" id="ls-2">
+          <span class="loading-step-icon">✅</span>
+          ExerciseDB에서 맨몸 동작 필터링 완료
+          <div class="loading-step-bar"><div class="loading-step-fill"></div></div>
+        </div>
+        <div class="loading-step active" id="ls-3">
+          <span class="loading-step-icon" id="ls-3-icon">⏳</span>
+          YouTube API로 동작 영상 검색 중…
+          <div class="loading-step-bar"><div class="loading-step-fill" id="ls-3-fill" style="width:60%"></div></div>
+        </div>
+        <div class="loading-step" id="ls-4">
+          <span class="loading-step-icon">○</span>
+          상위 영상 3개 선별 중
+          <div class="loading-step-bar"><div class="loading-step-fill" style="width:0%"></div></div>
+        </div>
+        <div class="loading-step" id="ls-5">
+          <span class="loading-step-icon">○</span>
+          루틴 구성 최종 완성
+          <div class="loading-step-bar"><div class="loading-step-fill" style="width:0%"></div></div>
+        </div>
+      </div>
+
+      <!-- 선택한 조건 요약 -->
+      <div class="filter-summary">
+        <div class="filter-summary-title">📋 분석 조건 요약</div>
+        <div class="filter-chips">
+          <span class="filter-chip">🔥 지방 태우기</span>
+          <span class="filter-chip">🕑 30~40분</span>
+          <span class="filter-chip">🌱 초보자</span>
+          <span class="filter-chip">🎯 코어</span>
+          <span class="filter-chip">🌐 전신</span>
+          <span class="filter-chip">🙌 맨몸</span>
+          <span class="filter-chip">주 3~4회</span>
+          <span class="filter-chip">⚠️ 무릎 제외</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-bar">
+      <div class="tab-item"><span class="ti">🏠</span>홈</div>
+      <div class="tab-item"><span class="ti">✚</span>새루틴</div>
+      <div class="tab-item active"><span class="ti">🎯</span>추천</div>
+      <div class="tab-item"><span class="ti">📁</span>보관함</div>
+      <div class="tab-item"><span class="ti">👤</span>내정보</div>
+    </div>
+  </div>
+
+  <!-- ══ STEP 6 : 결과 화면 ══ -->
+  <div class="screen" id="screen-6">
+    <div class="result-screen">
+      <!-- 조건 요약 바 -->
+      <div class="result-summary">
+        <div class="result-summary-row">
+          <div class="result-summary-title">📋 선택 조건</div>
+          <button class="result-edit-btn" onclick="goStep(1, document.querySelector('.step-nav button:nth-child(1)'))">✏️ 다시 설정</button>
+        </div>
+        <div class="result-chips">
+          <span class="result-chip">🔥 지방 태우기</span>
+          <span class="result-chip">🕑 30~40분</span>
+          <span class="result-chip">🌱 초보자</span>
+          <span class="result-chip">🎯 코어·전신</span>
+          <span class="result-chip">🙌 맨몸</span>
+        </div>
+      </div>
+
+      <!-- ExerciseDB 동작 목록 -->
+      <div class="exercise-section">
+        <div class="section-title-row">
+          <span class="section-title">추천 동작 목록 (ExerciseDB)</span>
+          <span class="section-count">8개 필터됨</span>
+        </div>
+
+        <div class="exercise-card selected" onclick="selectExercise(this, 0)">
+          <div class="exercise-thumb">🏃</div>
+          <div class="exercise-info">
+            <div class="exercise-name">버피 (Burpee)</div>
+            <div class="exercise-meta-row">
+              <span class="ex-tag muscle">전신</span>
+              <span class="ex-tag equip">맨몸</span>
+              <span class="ex-tag">초보자</span>
+            </div>
+            <div class="exercise-desc">서서 바닥에 손을 짚고 엎드렸다가 다시 점프해 일어나는 전신 복합 동작</div>
+          </div>
+          <div class="exercise-select-btn">✓</div>
+        </div>
+
+        <div class="exercise-card selected" onclick="selectExercise(this, 1)">
+          <div class="exercise-thumb">🎯</div>
+          <div class="exercise-info">
+            <div class="exercise-name">플랭크 (Plank)</div>
+            <div class="exercise-meta-row">
+              <span class="ex-tag muscle">코어</span>
+              <span class="ex-tag equip">맨몸</span>
+              <span class="ex-tag">초보자</span>
+            </div>
+            <div class="exercise-desc">팔꿈치로 지지하며 몸을 일자로 만들어 버티는 코어 안정화 동작</div>
+          </div>
+          <div class="exercise-select-btn">✓</div>
+        </div>
+
+        <div class="exercise-card selected" onclick="selectExercise(this, 2)">
+          <div class="exercise-thumb">🦵</div>
+          <div class="exercise-info">
+            <div class="exercise-name">힙 브리지 (Hip Bridge)</div>
+            <div class="exercise-meta-row">
+              <span class="ex-tag muscle">엉덩이·코어</span>
+              <span class="ex-tag equip">맨몸</span>
+              <span class="ex-tag">초보자</span>
+            </div>
+            <div class="exercise-desc">누워서 무릎을 세우고 엉덩이를 들어올리는 둔근 & 코어 강화 동작</div>
+          </div>
+          <div class="exercise-select-btn">✓</div>
+        </div>
+
+        <div class="exercise-card" onclick="selectExercise(this, 3)">
+          <div class="exercise-thumb">💨</div>
+          <div class="exercise-info">
+            <div class="exercise-name">마운틴 클라이머</div>
+            <div class="exercise-meta-row">
+              <span class="ex-tag muscle">코어·유산소</span>
+              <span class="ex-tag equip">맨몸</span>
+              <span class="ex-tag">초보자</span>
+            </div>
+            <div class="exercise-desc">플랭크 자세에서 무릎을 번갈아 가슴 쪽으로 당기는 심폐 & 코어 복합 동작</div>
+          </div>
+          <div class="exercise-select-btn">✓</div>
+        </div>
+
+        <div class="exercise-card" onclick="selectExercise(this, 4)">
+          <div class="exercise-thumb">🙌</div>
+          <div class="exercise-info">
+            <div class="exercise-name">무릎 대고 팔굽혀펴기</div>
+            <div class="exercise-meta-row">
+              <span class="ex-tag muscle">가슴·팔</span>
+              <span class="ex-tag equip">맨몸</span>
+              <span class="ex-tag">초보자</span>
+            </div>
+            <div class="exercise-desc">무릎을 바닥에 대고 팔을 굽혀 가슴을 내려갔다 올라오는 상체 근력 동작</div>
+          </div>
+          <div class="exercise-select-btn">✓</div>
+        </div>
+      </div>
+
+      <!-- YouTube 영상 섹션 (선택된 동작 기준) -->
+      <div class="yt-section">
+        <div class="section-title-row" style="margin-bottom:8px;">
+          <span class="section-title">📺 YouTube 추천 영상</span>
+          <span style="font-size:0.62rem;color:var(--text3);">YouTube API</span>
+        </div>
+
+        <!-- 선택된 동작 표시 -->
+        <div style="display:flex;gap:6px;margin-bottom:10px;overflow-x:auto;padding-bottom:4px;">
+          <div class="yt-selected-exercise" style="white-space:nowrap;flex-shrink:0;" onclick="switchYTExercise(0)">
+            <span class="yt-sel-icon">🏃</span>
+            <div>
+              <div class="yt-sel-name">버피</div>
+            </div>
+          </div>
+          <div class="yt-selected-exercise" style="white-space:nowrap;flex-shrink:0;background:var(--surface2);border-color:var(--border2);" onclick="switchYTExercise(1)">
+            <span class="yt-sel-icon">🎯</span>
+            <div>
+              <div class="yt-sel-name" style="color:var(--text2);">플랭크</div>
+            </div>
+          </div>
+          <div class="yt-selected-exercise" style="white-space:nowrap;flex-shrink:0;background:var(--surface2);border-color:var(--border2);" onclick="switchYTExercise(2)">
+            <span class="yt-sel-icon">🦵</span>
+            <div>
+              <div class="yt-sel-name" style="color:var(--text2);">힙 브리지</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- YouTube 검색 완료 상태 -->
+        <div class="yt-search-status">
+          <span class="yt-done-icon">✅</span>
+          <span>"초보자 버피 홈트" 검색 완료 — 상위 3개 영상</span>
+        </div>
+
+        <!-- 영상 카드 1 (TOP PICK) -->
+        <div class="yt-card top-pick">
+          <div class="yt-thumb" style="background:linear-gradient(135deg,#2d1b24,#4a1528);">
+            <div class="yt-thumb-bg">🏋️</div>
+            <div class="yt-top-badge">🏅 TOP PICK</div>
+            <div class="yt-play-btn">▶</div>
+            <div class="yt-duration">15:42</div>
+          </div>
+          <div class="yt-info">
+            <div class="yt-title">완전 초보도 할 수 있는 버피 10분 홈트 | 올바른 자세부터 배우기</div>
+            <div class="yt-channel-row">
+              <span class="yt-channel">닥터유 Dr. Yu</span>
+              <span class="yt-verified">✅ 인증</span>
+            </div>
+            <div class="yt-stats-row">
+              <span class="yt-stat">👁 84만</span>
+              <span class="yt-stat">❤️ 9.2K</span>
+              <span class="yt-stat">📅 2024.03</span>
+            </div>
+          </div>
+          <button class="yt-add-btn" id="yt-add-0" onclick="addVideo(0)">+ 루틴에 추가</button>
+        </div>
+
+        <!-- 영상 카드 2 -->
+        <div class="yt-card">
+          <div class="yt-thumb" style="background:linear-gradient(135deg,#1b2d24,#154a28);">
+            <div class="yt-thumb-bg">🔥</div>
+            <div class="yt-play-btn">▶</div>
+            <div class="yt-duration">22:18</div>
+          </div>
+          <div class="yt-info">
+            <div class="yt-title">버피 챌린지 20분 HIIT | 지방 태우는 홈트 루틴 (기구 없음)</div>
+            <div class="yt-channel-row">
+              <span class="yt-channel">땅끄부부</span>
+              <span class="yt-verified">✅ 인증</span>
+            </div>
+            <div class="yt-stats-row">
+              <span class="yt-stat">👁 62만</span>
+              <span class="yt-stat">❤️ 6.8K</span>
+              <span class="yt-stat">📅 2024.07</span>
+            </div>
+          </div>
+          <button class="yt-add-btn" id="yt-add-1" onclick="addVideo(1)">+ 루틴에 추가</button>
+        </div>
+
+        <!-- 영상 카드 3 -->
+        <div class="yt-card">
+          <div class="yt-thumb" style="background:linear-gradient(135deg,#1b1f2d,#15204a);">
+            <div class="yt-thumb-bg">💪</div>
+            <div class="yt-play-btn">▶</div>
+            <div class="yt-duration">08:55</div>
+          </div>
+          <div class="yt-info">
+            <div class="yt-title">버피 초보자 가이드 — 무릎 안 아프게 하는 3단계 변형 동작</div>
+            <div class="yt-channel-row">
+              <span class="yt-channel">피지컬갤러리</span>
+              <span class="yt-verified">✅ 인증</span>
+            </div>
+            <div class="yt-stats-row">
+              <span class="yt-stat">👁 41만</span>
+              <span class="yt-stat">❤️ 4.1K</span>
+              <span class="yt-stat">📅 2023.11</span>
+            </div>
+          </div>
+          <button class="yt-add-btn" id="yt-add-2" onclick="addVideo(2)">+ 루틴에 추가</button>
+        </div>
+      </div>
+
+      <!-- 루틴 이름 & 저장 -->
+      <div class="save-section">
+        <input class="routine-name-input" type="text" placeholder="루틴 이름 (예: 아침 30분 지방 태우기)" value="🔥 초보자 지방 태우기 30분"/>
+        <div class="save-row">
+          <button class="btn-save" onclick="showToast('🎉 루틴이 보관함에 저장되었어요!')">✔ 루틴 저장하기</button>
+          <button class="btn-share" onclick="showToast('🔗 공유 링크가 복사되었어요!')">↗</button>
+        </div>
+      </div>
+    </div><!-- /result-screen -->
+
+    <div class="tab-bar">
+      <div class="tab-item"><span class="ti">🏠</span>홈</div>
+      <div class="tab-item"><span class="ti">✚</span>새루틴</div>
+      <div class="tab-item active"><span class="ti">🎯</span>추천</div>
+      <div class="tab-item"><span class="ti">📁</span>보관함</div>
+      <div class="tab-item"><span class="ti">👤</span>내정보</div>
+    </div>
+  </div>
+
+</div><!-- /phone-shell -->
+</div><!-- /phone-wrap -->
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- ANNOTATION -->
+<div class="annotation">
+  <h3>📐 화면 구성 & 데이터 흐름 설명</h3>
+  <div class="anno-row">
+    <div class="anno-dot"></div>
+    <div class="anno-text"><strong>Step 1~4 — 질문 카드</strong>: 챗봇 대화 형태(버블 UI)로 질문을 제시하고, 카드 선택으로 답변합니다. 이전 답변이 오른쪽 버블로 누적되어 흐름을 보여줍니다.</div>
+  </div>
+  <div class="anno-row">
+    <div class="anno-dot"></div>
+    <div class="anno-text"><strong>Step 5 — AI 분석 로딩</strong>: ExerciseDB 필터링 → YouTube API 검색 → 상위 영상 선별 3단계를 진행 바로 시각화합니다. 선택 조건 칩을 보여줘 신뢰감을 줍니다.</div>
+  </div>
+  <div class="anno-row">
+    <div class="anno-dot"></div>
+    <div class="anno-text"><strong>Step 6 — 결과 화면</strong>: ExerciseDB 기반 동작 카드(근육군·장비·난이도 태그)와 각 동작별 YouTube 영상 3개를 가로 탭으로 탐색합니다. TOP PICK 뱃지로 최적 영상을 강조합니다.</div>
+  </div>
+  <div class="anno-row">
+    <div class="anno-dot"></div>
+    <div class="anno-text"><strong>YouTube 영상 목록</strong>: 동작 선택 탭 → 해당 동작 검색어로 YouTube API 호출 → 채널명·조회수·업로드일·좋아요 수 표시. "루틴에 추가" 버튼으로 바로 저장 가능합니다.</div>
+  </div>
+  <div class="anno-row">
+    <div class="anno-dot"></div>
+    <div class="anno-text"><strong>ExerciseDB 필터 조건</strong>: bodyPart(신체부위) + equipment(장비=bodyweight) + difficulty(난이도) + target(근육군)으로 4중 필터링합니다. 무릎 통증 선택 시 knee 관련 동작 자동 제외.</div>
+  </div>
+</div>
+
+<script>
+/* ── 화면 전환 ── */
+function goStep(n, navBtn) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  const el = document.getElementById('screen-' + n);
+  if (el) el.classList.add('active');
+  document.querySelectorAll('.step-nav button').forEach(b => b.classList.remove('active'));
+  if (navBtn) navBtn.classList.add('active');
+  // 로딩 화면 진입 시 자동 진행
+  if (n === 5) runLoading();
+}
+
+/* ── 단일 선택 ── */
+function selectOption(el, group, multiRow) {
+  const parent = multiRow ? el.parentElement : document.querySelector('#screen-' + currentStep() + ' .options-grid[data-group="' + group + '"]') || el.parentElement;
+  parent.querySelectorAll('.option-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  // 다음 버튼 활성화
+  const nextBtn = el.closest('.screen').querySelector('.btn-next');
+  if (nextBtn) nextBtn.disabled = false;
+}
+
+/* ── 복수 선택 ── */
+function toggleMulti(el) {
+  el.classList.toggle('selected');
+  const nextBtn = el.closest('.screen').querySelector('.btn-next');
+  if (nextBtn) nextBtn.disabled = false;
+}
+
+function currentStep() {
+  const a = document.querySelector('.screen.active');
+  return a ? a.id.replace('screen-','') : 1;
+}
+
+/* ── 운동 동작 선택 ── */
+function selectExercise(el) {
+  el.classList.toggle('selected');
+}
+
+/* ── YouTube 탭 전환 ── */
+const ytData = [
+  { name:'버피', emoji:'🏃' },
+  { name:'플랭크', emoji:'🎯' },
+  { name:'힙 브리지', emoji:'🦵' },
+];
+function switchYTExercise(idx) {
+  document.querySelectorAll('.yt-selected-exercise').forEach((el, i) => {
+    const isActive = i === idx;
+    el.style.background = isActive ? 'var(--wine-xlight)' : 'var(--surface2)';
+    el.style.borderColor = isActive ? 'var(--wine-light)' : 'var(--border2)';
+    el.querySelector('.yt-sel-name').style.color = isActive ? 'var(--wine)' : 'var(--text2)';
+  });
+  showToast(`"초보자 ${ytData[idx].name} 홈트" 영상 결과`);
+}
+
+/* ── 영상 추가 ── */
+function addVideo(idx) {
+  const btn = document.getElementById('yt-add-' + idx);
+  if (btn.classList.contains('added')) return;
+  btn.textContent = '✅ 루틴에 추가됨';
+  btn.classList.add('added');
+  showToast('영상이 루틴에 추가되었어요!');
+}
+
+/* ── 로딩 시뮬레이션 ── */
+function runLoading() {
+  const steps = ['ls-3','ls-4','ls-5'];
+  const fills = [document.getElementById('ls-3-fill'), null, null];
+  let i = 0;
+  function next() {
+    if (i >= steps.length) {
+      setTimeout(() => {
+        goStep(6, document.querySelector('.step-nav button:nth-child(6)'));
+      }, 700);
+      return;
+    }
+    const el = document.getElementById(steps[i]);
+    if (el) {
+      el.classList.remove('active');
+      el.classList.add('done');
+      el.querySelector('.loading-step-icon').textContent = '✅';
+      if (i + 1 < steps.length) {
+        const next_el = document.getElementById(steps[i+1]);
+        if (next_el) {
+          next_el.classList.add('active');
+          next_el.querySelector('.loading-step-icon').textContent = '⏳';
+          const fill = next_el.querySelector('.loading-step-fill');
+          if (fill) fill.style.width = '60%';
+        }
+      }
+    }
+    i++;
+    setTimeout(next, 900);
+  }
+  // 초기화
+  ['ls-3','ls-4','ls-5'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.remove('done','active');
+    el.querySelector('.loading-step-icon').textContent = '○';
+    const fill = el.querySelector('.loading-step-fill');
+    if (fill) fill.style.width = '0%';
+  });
+  document.getElementById('ls-3').classList.add('active');
+  document.getElementById('ls-3').querySelector('.loading-step-icon').textContent = '⏳';
+  const f = document.getElementById('ls-3-fill');
+  if (f) f.style.width = '60%';
+  setTimeout(next, 1000);
+}
+
+/* ── Step1 옵션 클릭 활성화 ── */
+document.querySelectorAll('#screen-1 .option-card').forEach(card => {
+  card.addEventListener('click', () => {
+    document.getElementById('btn-1').disabled = false;
+  });
+});
+
+/* ── Toast ── */
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2400);
+}
+</script>
+</body>
+</html>
