@@ -203,7 +203,8 @@ export default function SubtitleEditorModal({ clip, onClose, onSave }) {
         endTime = group.startTime + 5;
       }
 
-      const durationSec = Math.max(0, Math.round(endTime - group.startTime));
+      const customDur = group.items.find(({ subtitle }) => typeof subtitle.customDuration === 'number')?.subtitle.customDuration;
+      const durationSec = typeof customDur === 'number' && customDur > 0 ? customDur : Math.max(0, Math.round(endTime - group.startTime));
 
       group.startTimeStr = formatSecondsToTime(Math.round(group.startTime));
       group.endTimeStr = formatSecondsToTime(Math.round(endTime));
@@ -223,6 +224,18 @@ export default function SubtitleEditorModal({ clip, onClose, onSave }) {
       }
       return next;
     });
+  }
+
+  function handleDurationChange(exName, newDurationStr) {
+    const newDuration = parseInt(newDurationStr, 10);
+    setSubtitles((prev) =>
+      prev.map((sub) => {
+        if (sub.exercise === exName) {
+          return { ...sub, customDuration: isNaN(newDuration) ? '' : newDuration };
+        }
+        return sub;
+      })
+    );
   }
 
   function toggleExerciseGroup(exName, selectAll) {
@@ -249,7 +262,8 @@ export default function SubtitleEditorModal({ clip, onClose, onSave }) {
       ...subtitle,
       selected: selectedIndexes.has(idx),
     }));
-    onSave && onSave(subtitlesWithSelection);
+    const aiSimplified = mode === 'result' || subtitles.some(s => s.exercise && s.exercise !== '준비/기타');
+    onSave && onSave(subtitlesWithSelection, aiSimplified);
     onClose && onClose();
   }
 
@@ -317,13 +331,27 @@ export default function SubtitleEditorModal({ clip, onClose, onSave }) {
                         ({group.startTimeStr} ~ {group.endTimeStr}, {group.durationSec}초)
                       </span>
                     </span>
-                    <button
-                      className="exercise-group__select-btn"
-                      onClick={() => toggleExerciseGroup(group.name, !allSelected)}
-                      style={{ padding: '4px 10px', fontSize: '12px', border: '1px solid #ddd', borderRadius: '4px', background: '#f9f9f9', cursor: 'pointer' }}
-                    >
-                      {allSelected ? '동작 해제' : '동작 선택'}
-                    </button>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <label style={{ fontSize: '11px', color: '#666' }}>동작 시간:</label>
+                        <input
+                          type="number"
+                          min="1"
+                          value={group.durationSec || ''}
+                          onChange={(e) => handleDurationChange(group.name, e.target.value)}
+                          onClick={(e) => e.stopPropagation()}
+                          style={{ width: '56px', padding: '3px 6px', fontSize: '12px', border: '1px solid #ddd', borderRadius: '4px', textAlign: 'center', fontWeight: 'bold', color: 'var(--wine)' }}
+                        />
+                        <span style={{ fontSize: '12px', color: '#666' }}>초</span>
+                      </div>
+                      <button
+                        className="exercise-group__select-btn"
+                        onClick={() => toggleExerciseGroup(group.name, !allSelected)}
+                        style={{ padding: '4px 10px', fontSize: '12px', border: '1px solid #ddd', borderRadius: '4px', background: '#f9f9f9', cursor: 'pointer' }}
+                      >
+                        {allSelected ? '동작 해제' : '동작 선택'}
+                      </button>
+                    </div>
                   </div>
                   {!isCollapsed && (
                     <div className="exercise-group__items" style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '10px' }}>

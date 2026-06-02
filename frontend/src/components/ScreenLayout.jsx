@@ -26,7 +26,7 @@ const SCROLL_COLLAPSE_THRESHOLD = 8;
  * @param {React.ReactNode} [headerExtra] - 플레이어 등 커스텀 header 마크업
  * @param {React.ReactNode} children - screen-body 안에 들어갈 섹션들
  */
-function ScreenLayout({ screenId, title, subtitle, headerExtra, children }) {
+function ScreenLayout({ screenId, title, subtitle, headerExtra, onMenuClick, children }) {
   const [headerCollapsed, setHeaderCollapsed] = useState(false);
   const bodyRef = useRef(null);
 
@@ -55,9 +55,16 @@ function ScreenLayout({ screenId, title, subtitle, headerExtra, children }) {
     <div className="screen active" id={screenId}>
       <header className={headerClassName}>
         {headerExtra ?? (
-          <div className="screen-header__titles">
-            <h2>{title}</h2>
-            {subtitle != null && subtitle !== '' && <p>{subtitle}</p>}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', gap: '12px' }}>
+            <div className="screen-header__titles" style={{ flex: 1, minWidth: 0 }}>
+              <h2>{title}</h2>
+              {subtitle != null && subtitle !== '' && <p>{subtitle}</p>}
+            </div>
+            {onMenuClick && (
+              <button type="button" className="header-menu-btn" onClick={onMenuClick} aria-label="메뉴 열기">
+                ☰
+              </button>
+            )}
           </div>
         )}
       </header>
