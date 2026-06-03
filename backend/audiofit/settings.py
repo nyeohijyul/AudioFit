@@ -3,18 +3,39 @@ AudioFit Django Settings
 """
 import os
 from pathlib import Path
-from decouple import config
+from decouple import Config, RepositoryEnv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+env_path = BASE_DIR / '.env'
+if env_path.exists():
+    config = Config(RepositoryEnv(env_path))
+else:
+    from decouple import config
+
+
+def safe_bool_config(key, default=True):
+    try:
+        return config(key, default=default, cast=bool)
+    except ValueError:
+        raw_value = os.getenv(key)
+        if isinstance(raw_value, str):
+            normalized = raw_value.strip().lower()
+            if normalized in ('false', '0', 'no', 'off', 'release', 'prod', 'production'):
+                return False
+            if normalized in ('true', '1', 'yes', 'on'):
+                return True
+        return bool(default)
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = config('SECRET_KEY', default='django-insecure-dev-key-change-in-production')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = config('DEBUG', default=True, cast=bool)
+DEBUG = safe_bool_config('DEBUG', default=True)
 
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=lambda v: [s.strip() for s in v.split(',')])
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1,audiofit.onrender.com', cast=lambda v: [s.strip() for s in v.split(',')])
+# ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=lambda v: [s.strip() for s in v.split(',')])
 
 # Application definition
 INSTALLED_APPS = [
@@ -39,7 +60,7 @@ MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.common.CommonMiddleware',
+#    'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
@@ -66,12 +87,19 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'audiofit.wsgi.application'
 
+import dj_database_url
+
 # Database
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    'default': dj_database_url.config(
+        default=config('DATABASE_URL', default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}"),
+        conn_max_age=600,
+        conn_health_checks=True,
+    )
+    # 'default': {
+    #     'ENGINE': 'django.db.backends.sqlite3',
+    #     'NAME': BASE_DIR / 'db.sqlite3',
+    # }
 }
 
 # Password validation
@@ -125,7 +153,7 @@ REST_FRAMEWORK = {
 # CORS Configuration
 CORS_ALLOWED_ORIGINS = config(
     'CORS_ALLOWED_ORIGINS',
-    default='http://localhost:5173,http://localhost:3000',
+    default='http://localhost:5173,http://localhost:3000,https://audio-fit.vercel.app',
     cast=lambda v: [s.strip() for s in v.split(',')]
 )
 
@@ -147,4 +175,8 @@ CORS_ALLOW_HEADERS = [
 CORS_EXPOSE_HEADERS = [
     'content-type',
     'x-csrftoken',
+]
+
+CSRF_TRUSTED_ORIGINS = [
+    'https://audio-fit.vercel.app',
 ]
