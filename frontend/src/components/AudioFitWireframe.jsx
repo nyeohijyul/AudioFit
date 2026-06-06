@@ -591,6 +591,11 @@ function AudioFitWireframe({ user, onLogout }) {
   }, [getAuthToken]);
 
   const fetchClipTranscript = useCallback(async (clip) => {
+    // 추천 루틴 클립(source: 'recommendation')은 자막 로드 스킵 (나중에 편집할 때만 로드)
+    if (clip?.source === 'recommendation') {
+      return clip;
+    }
+    
     if (!clip?.youtube_url || (Array.isArray(clip.subtitles) && clip.subtitles.length > 0)) {
       return clip;
     }

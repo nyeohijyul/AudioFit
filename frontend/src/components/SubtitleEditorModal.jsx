@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_BASE || 'http://localhost:8000';
@@ -78,10 +78,57 @@ export default function SubtitleEditorModal({ clip, onClose, onSave }) {
   const [mode, setMode] = useState('original');
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [aiError, setAiError] = useState('');
+  const [isLoadingSubtitles, setIsLoadingSubtitles] = useState(false);
+  const [loadError, setLoadError] = useState('');
 
   const [subtitles, setSubtitles] = useState(() => getInitialSubtitles(clip?.subtitles || []));
   const [selectedIndexes, setSelectedIndexes] = useState(() => getInitialSelectedIndexes(subtitles));
   const [collapsedExercises, setCollapsedExercises] = useState(() => new Set());
+
+  // 자막 로드 (YouTube URL에서 자막이 없을 때)
+  useEffect(() => {
+    if (!clip?.youtube_url) return;
+    if (Array.isArray(clip.subtitles) && clip.subtitles.length > 0) return;
+
+    const loadSubtitles = async () => {
+      setIsLoadingSubtitles(true);
+      setLoadError('');
+
+      try {
+        const authToken = token || (await getToken(true));
+        if (!authToken) {
+          setLoadError('인증 정보가 준비되지 않았습니다.');
+          setIsLoadingSubtitles(false);
+          return;
+        }
+
+        const response = await fetch(`${API_BASE_URL}/api/v1/clips/transcript/`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${authToken}`,
+          },
+          body: JSON.stringify({ youtube_url: clip.youtube_url }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || '자막 로드에 실패했습니다.');
+        }
+
+        const loadedSubtitles = getInitialSubtitles(data.subtitles || []);
+        setSubtitles(loadedSubtitles);
+        setSelectedIndexes(getInitialSelectedIndexes(loadedSubtitles));
+      } catch (error) {
+        setLoadError(error.message || '자막 로드 중 오류가 발생했습니다.');
+      } finally {
+        setIsLoadingSubtitles(false);
+      }
+    };
+
+    loadSubtitles();
+  }, [clip?.youtube_url, clip?.subtitles, token, getToken]);
 
   const selectedCount = selectedIndexes.size;
   const isAllSelected = subtitles.length > 0 && selectedCount === subtitles.length;
@@ -275,6 +322,7 @@ export default function SubtitleEditorModal({ clip, onClose, onSave }) {
           <div className="subtitle-modal__header-row">
             <button className="subtitle-modal__back" onClick={onClose}>←</button>
             <h2>자막 편집</h2>
+            {isLoadingSubtitles && <span style={{ fontSize: '12px', color: '#999', marginLeft: '10px' }}>자막 로드 중...</span>}
           </div>
           <div className="subtitle-modal__video-chip">
             <div className="subtitle-modal__thumb">YT</div>
@@ -286,6 +334,21 @@ export default function SubtitleEditorModal({ clip, onClose, onSave }) {
             </div>
           </div>
         </div>
+
+        {loadError && (
+          <div style={{ 
+            padding: '12px', 
+            margin: '12px 12px 0 12px', 
+            background: '#ffe0e0', 
+            border: '1px solid #ffcccc', 
+            borderRadius: '6px', 
+            color: '#c00',
+            fontSize: '13px',
+            fontWeight: 'bold'
+          }}>
+            ⚠️ {loadError}
+          </div>
+        )}
 
         <div className="subtitle-modal__controls">
           <div className="subtitle-mode-bar">
@@ -305,7 +368,7 @@ export default function SubtitleEditorModal({ clip, onClose, onSave }) {
             <button
               className="subtitle-ai-banner__button"
               onClick={handleSimplifySelected}
-              disabled={isAiLoading || selectedCount === 0}
+              disabled={isAiLoading || isLoadingSubtitles || selectedCount === 0}
             >
               {isAiLoading ? 'AI 변환 중...' : 'AI로 선택 자막 쉽게 바꾸기'}
             </button>
@@ -314,7 +377,25 @@ export default function SubtitleEditorModal({ clip, onClose, onSave }) {
         </div>
 
         <div className="subtitle-list-wrap">
-          {mode === 'result' ? (
+          {isLoadingSubtitles ? (
+            <div style={{ 
+              padding: '40px 20px', 
+              textAlign: 'center', 
+              color: '#999' 
+            }}>
+              <div style={{ fontSize: '14px', marginBottom: '8px' }}>자막을 불러오는 중입니다...</div>
+              <div style={{ fontSize: '12px', color: '#bbb' }}>YouTube에서 자막을 추출하고 있어요</div>
+            </div>
+          ) : subtitles.length === 0 ? (
+            <div style={{
+              padding: '40px 20px',
+              textAlign: 'center',
+              color: '#999'
+            }}>
+              <div style={{ fontSize: '14px' }}>자막이 없습니다</div>
+              <div style={{ fontSize: '12px', color: '#bbb', marginTop: '4px' }}>이 영상은 자막을 불러올 수 없습니다</div>
+            </div>
+          ) : mode === 'result' ? (
             groupedSubtitles.map((group) => {
               const nonExcludedItems = group.items.filter(({ subtitle }) => !isAutoExcludedSubtitle(subtitle));
               const allSelected = nonExcludedItems.length > 0 && nonExcludedItems.every(({ idx }) => selectedIndexes.has(idx));
@@ -429,9 +510,9 @@ export default function SubtitleEditorModal({ clip, onClose, onSave }) {
         <div className="bottom-bar">
           <div className="bottom-bar-row">
             <span className="select-count"><strong id="sel-count">{selectedCount}</strong> / {subtitles.length}개 자막 선택됨</span>
-            <button className="select-all-btn" onClick={toggleSelectAll}>{isAllSelected ? '전체 해제' : '전체 선택'}</button>
+            <button className="select-all-btn" onClick={toggleSelectAll} disabled={isLoadingSubtitles || subtitles.length === 0}>{isAllSelected ? '전체 해제' : '전체 선택'}</button>
           </div>
-          <button className="btn-save" onClick={handleSave} disabled={selectedCount === 0}>선택한 자막으로 루틴 만들기</button>
+          <button className="btn-save" onClick={handleSave} disabled={selectedCount === 0 || isLoadingSubtitles}>선택한 자막으로 루틴 만들기</button>
         </div>
       </div>
     </div>

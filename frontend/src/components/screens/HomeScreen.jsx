@@ -377,13 +377,10 @@ function HomeScreen({ onMenuClick, onEditRecommendedRoutine }) {
         thumbnail: item.snippet?.thumbnails?.medium?.url || item.snippet?.thumbnails?.default?.url || '',
         topPick: index === 0,
       }));
-    } catch {
-      const backendVideos = await fetchExerciseVideosFromBackend(exercise);
-      if (backendVideos && backendVideos.length > 0) {
-        return backendVideos;
-      }
-      setErrorMessage('YouTube API 검색에 실패해 데모 영상 리스트를 표시했어요.');
-      return buildMockVideos(exercise);
+    } catch (error) {
+      console.error(`YouTube 비디오 검색 실패 (${exercise.koName || exercise.name}):`, error);
+      // YouTube 검색 실패 시 빈 배열 반환 - runRecommendation에서 감지
+      return [];
     }
   };
 
@@ -446,10 +443,27 @@ function HomeScreen({ onMenuClick, onEditRecommendedRoutine }) {
         const resultExercises = (backendResult.exercises || []).map(normalizeExercise);
         setExercises(resultExercises);
         setActiveExerciseId(resultExercises[0]?.id || null);
-        setVideoMap(normalizeVideoMap(backendResult.videos));
+        
+        // 항상 YouTube 비디오 조회
+        const videos = {};
+        const failedExercises = [];
+        for (const exercise of resultExercises.slice(0, 6)) {
+          const videoResult = await searchYoutubeVideos(exercise);
+          if (!videoResult || videoResult.length === 0) {
+            failedExercises.push(exercise.koName || exercise.name);
+          }
+          videos[exercise.id] = videoResult || [];
+        }
+        
+        setVideoMap(videos);
         setPhase('result');
-        if (backendResult.source_notes?.length) {
-          setErrorMessage(backendResult.source_notes.join(' '));
+        
+        const messages = [...(backendResult.source_notes || [])];
+        if (failedExercises.length > 0) {
+          messages.push(`${failedExercises.join(', ')} YouTube 영상 조회에 실패했습니다.`);
+        }
+        if (messages.length) {
+          setErrorMessage(messages.join(' '));
         }
         return;
       }
@@ -477,7 +491,7 @@ function HomeScreen({ onMenuClick, onEditRecommendedRoutine }) {
     const resultExercises = selected.length > 0 ? selected : exerciseData.slice(0, 5);
     const videos = {};
 
-    for (const exercise of resultExercises.slice(0, 3)) {
+    for (const exercise of resultExercises.slice(0, 6)) {
       videos[exercise.id] = await searchYoutubeVideos(exercise);
     }
 
