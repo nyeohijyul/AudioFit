@@ -189,15 +189,37 @@ def build_recommendation_prompt(exercises, answers):
 
 def extract_json(content):
     stripped = content.strip()
-    if stripped.startswith('```'):
-        stripped = stripped.strip('`')
-        if stripped.startswith('json'):
-            stripped = stripped[4:].strip()
-
+    
+    # Remove markdown code block if present
+    if '```' in stripped:
+        parts = stripped.split('```')
+        for part in parts:
+            part = part.strip()
+            if part.startswith('json'):
+                part = part[4:].strip()
+            if (part.startswith('[') and part.endswith(']')) or (part.startswith('{') and part.endswith('}')):
+                return part
+            # Look for bracket boundaries inside
+            s = part.find('[')
+            e = part.rfind(']')
+            if s != -1 and e != -1:
+                return part[s:e + 1]
+            s = part.find('{')
+            e = part.rfind('}')
+            if s != -1 and e != -1:
+                return part[s:e + 1]
+                
+    # Fallback to finding brackets in the raw string
     start = stripped.find('[')
     end = stripped.rfind(']')
     if start != -1 and end != -1:
         return stripped[start:end + 1]
+        
+    start = stripped.find('{')
+    end = stripped.rfind('}')
+    if start != -1 and end != -1:
+        return stripped[start:end + 1]
+        
     return stripped
 
 
