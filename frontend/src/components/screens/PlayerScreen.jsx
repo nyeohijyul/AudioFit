@@ -108,10 +108,10 @@ function PlayerScreen({
 
       <div className="action-big">{exercise.name}</div>
 
-      {/* TTS 재생 중일 때 현재 텍스트만 보여줌 */}
-      {ttsPhase === 'playing' ? (
+      {/* TTS 재생 또는 일시정지 중일 때 현재 텍스트 표시 */}
+      {(ttsPhase === 'playing' || ttsPhase === 'paused') ? (
         <div className="tts-display">
-          <div className="tts-label">설명 재생 중...</div>
+          <div className="tts-label">{ttsPhase === 'playing' ? '설명 재생 중...' : '설명 일시정지됨'}</div>
           <div className="tts-text">{currentTtsText}</div>
           <div className="tts-progress-bar">
             <div className="tts-progress-fill" style={{ width: `${ttsProgress}%` }} />
