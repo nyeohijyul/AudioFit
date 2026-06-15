@@ -100,7 +100,7 @@ function AudioFitWireframe({ user, onLogout }) {
   const clipIdRef = useRef(1);
 
   // TTS 훅
-  const { ttsPhase, currentTtsText, ttsProgress, ttsAudioRef, playTTS, stopTTS } = usePlayerTTS(token, getToken);
+  const { ttsPhase, currentTtsText, ttsProgress, ttsAudioRef, playTTS, pauseTTS, resumeTTS, stopTTS } = usePlayerTTS(token, getToken);
 
   const getAuthToken = useCallback(async () => {
     if (getToken) {
@@ -379,16 +379,31 @@ function AudioFitWireframe({ user, onLogout }) {
     };
   }, []);
 
+  // Sync playBtnIcon with ttsPhase changes
+  useEffect(() => {
+    if (ttsPhase === 'playing') {
+      setPlayBtnIcon('⏸');
+    } else if (ttsPhase === 'paused') {
+      setPlayBtnIcon('▶');
+    }
+  }, [ttsPhase]);
+
   /**
    * 재생/일시정지 토글 (원본 togglePlay).
    */
   const handleTogglePlay = useCallback(() => {
-    if (timerRunning) {
-      pauseTimer();
+    if (ttsPhase === 'playing') {
+      pauseTTS();
+    } else if (ttsPhase === 'paused') {
+      resumeTTS();
     } else {
-      startTimer();
+      if (timerRunning) {
+        pauseTimer();
+      } else {
+        startTimer();
+      }
     }
-  }, [timerRunning, pauseTimer, startTimer]);
+  }, [ttsPhase, timerRunning, pauseTTS, resumeTTS, pauseTimer, startTimer]);
 
   /**
    * 다음 동작 (원본 nextExercise).
@@ -591,6 +606,11 @@ function AudioFitWireframe({ user, onLogout }) {
   }, [getAuthToken]);
 
   const fetchClipTranscript = useCallback(async (clip) => {
+    // 추천 루틴 클립(source: 'recommendation')은 자막 로드 스킵 (나중에 편집할 때만 로드)
+    if (clip?.source === 'recommendation') {
+      return clip;
+    }
+    
     if (!clip?.youtube_url || (Array.isArray(clip.subtitles) && clip.subtitles.length > 0)) {
       return clip;
     }
@@ -637,7 +657,7 @@ function AudioFitWireframe({ user, onLogout }) {
   }, [showScreen, fetchClipTranscript]);
 
   const handleSaveRoutine = useCallback(async (name) => {
-    if (editingRoutine) {
+    if (editingRoutine && !String(editingRoutine.id).startsWith('recommend-')) {
       const updatedRoutine = {
         ...editingRoutine,
         name,
@@ -682,6 +702,7 @@ function AudioFitWireframe({ user, onLogout }) {
     };
     setRoutines((prev) => [newRoutine, ...prev]);
     showScreen('library');
+    setEditingRoutine(null);
 
     const authToken = await getAuthToken();
     if (authToken) {
