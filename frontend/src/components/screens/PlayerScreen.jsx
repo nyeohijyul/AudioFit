@@ -143,7 +143,7 @@ function PlayerScreen({
         </button>
       </div>
 
-      <div className="speed-chips">
+      {/* <div className="speed-chips">
         {SPEED_OPTIONS.map((label) => (
           <button
             key={label}
@@ -154,7 +154,7 @@ function PlayerScreen({
             {label}
           </button>
         ))}
-      </div>
+      </div> */}
 
       {/* 숨겨진 오디오 엘리먼트: 재생 완료 시 onTTSEnd 호출 */}
       <audio ref={ttsAudioRef} style={{ display: 'none' }} onEnded={onTTSEnd} />

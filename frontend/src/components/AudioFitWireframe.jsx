@@ -642,7 +642,7 @@ function AudioFitWireframe({ user, onLogout }) {
   }, [showScreen, fetchClipTranscript]);
 
   const handleSaveRoutine = useCallback(async (name) => {
-    if (editingRoutine) {
+    if (editingRoutine && !String(editingRoutine.id).startsWith('recommend-')) {
       const updatedRoutine = {
         ...editingRoutine,
         name,
@@ -687,6 +687,7 @@ function AudioFitWireframe({ user, onLogout }) {
     };
     setRoutines((prev) => [newRoutine, ...prev]);
     showScreen('library');
+    setEditingRoutine(null);
 
     const authToken = await getAuthToken();
     if (authToken) {
