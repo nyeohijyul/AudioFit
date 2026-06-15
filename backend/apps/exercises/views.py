@@ -29,7 +29,7 @@ class ExerciseViewSet(viewsets.ReadOnlyModelViewSet):
         return queryset
 
     @action(detail=True, methods=['get'], permission_classes=[AllowAny], url_path='videos')
-    def videos(self, request, pk=None):
+    def videos(self, request, exercise_id=None):
         exercise = self.get_object()
         level = request.query_params.get('level', 'beginner')
         normalized_exercise = normalize_exercise(exercise)
