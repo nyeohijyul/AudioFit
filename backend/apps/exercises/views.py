@@ -11,6 +11,7 @@ from apps.utils.recommendation import normalize_exercise, search_youtube_videos
 class ExerciseViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = ExerciseSerializer
     permission_classes = [AllowAny]
+    lookup_field = 'exercise_id'
 
     def get_queryset(self):
         queryset = Exercise.objects.all()
