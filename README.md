@@ -7,6 +7,20 @@ AudioFit은 유튜브 운동 영상의 자막을 추출하고 AI로 정제하여
 ---
 파이썬프로그래밍 - 바이브코딩 프로젝트
 
+## 로컬 실행 가이드
+1. Node.js 설치
+2. Python 설치
+3. 루트 폴더에서 cmd 창 열고 다음 명령어 실행
+> cd frontend
+> npm install
+> npm run dev
+4. 두번째 cmd 창 열고 다음 명령어 실행
+> cd backend
+> .venv\Scripts\activate
+> pip install -r requirements.txt
+> python manage.py runserver
+5. http://localhost:5173/ 접속
+
 ## 📁 프로젝트 구조 (Monorepo)
 
 ```
@@ -50,7 +64,6 @@ AudioFit/
 ### 4. 도넛 타이머 & 오디오 가이드 플레이어
 - **도넛 타이머**: 원형 SVG 프로그레스 타이머를 통해 현재 동작의 남은 시간을 직관적으로 제공합니다.
 - **Google Cloud TTS 음성 코칭**: 동작이 시작될 때 운동 설명을 부드러운 목소리의 한국어 음성(TTS)으로 재생하여, 사용자가 화면을 보지 않고 귀로 들으며 운동 동작을 따라 할 수 있습니다.
-- **배속 조절**: 사용자 편의에 맞추어 재생 속도(0.75×, 1×, 1.25×, 1.5×)를 제어할 수 있습니다.
 
 ### 5. 크로스 플랫폼 사용자 인증
 - **Firebase Auth**: Firebase를 통한 간편하고 안전한 소셜 로그인 및 사용자 인증을 처리합니다.
