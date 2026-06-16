@@ -1,6 +1,7 @@
 # AudioFit (나만의 홈트 라디오)
 
 [AudioFit 배포 링크](https://audio-fit.vercel.app/)
+[와이어프레임 링크](https://github.com/nyeohijyul/python-project-wireframe)
 
 AudioFit은 유튜브 운동 영상의 자막을 추출하고 AI로 정제하여, 사용자 맞춤형 오디오 홈트레이닝 환경을 제공하는 서비스입니다. 사용자는 원하는 유튜브 영상의 안내 자막을 기반으로 루틴을 구성하고, TTS(Text-To-Speech) 음성 가이드와 타이머를 통해 화면을 보지 않고도 운동에 집중할 수 있는 '홈트 라디오' 환경을 경험할 수 있습니다.
 
@@ -12,13 +13,20 @@ AudioFit은 유튜브 운동 영상의 자막을 추출하고 AI로 정제하여
 2. Python 설치
 3. 루트 폴더에서 cmd 창 열고 다음 명령어 실행
 > cd frontend
+
 > npm install
+
 > npm run dev
+
 4. 두번째 cmd 창 열고 다음 명령어 실행
 > cd backend
-> .venv\Scripts\activate
+
+> venv\Scripts\activate
+
 > pip install -r requirements.txt
+
 > python manage.py runserver
+
 5. http://localhost:5173/ 접속
 
 ## 📁 프로젝트 구조 (Monorepo)
