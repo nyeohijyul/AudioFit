@@ -80,7 +80,8 @@ def simplify_subtitles(subtitles):
             chunk_simplified = data.get('subtitles', [])
         except (json.JSONDecodeError, KeyError, TypeError):
             try:
-                parsed = json.loads(extract_json(content))
+                repaired = repair_json_quotes(extract_json(content))
+                parsed = json.loads(repaired)
                 if isinstance(parsed, dict):
                     chunk_simplified = parsed.get('subtitles', [])
                 elif isinstance(parsed, list):
@@ -174,7 +175,8 @@ def recommend_exercise_notes(exercises, answers):
         notes = data.get('notes', [])
     except (json.JSONDecodeError, KeyError, TypeError):
         try:
-            parsed = json.loads(extract_json(content))
+            repaired = repair_json_quotes(extract_json(content))
+            parsed = json.loads(repaired)
             if isinstance(parsed, dict):
                 notes = parsed.get('notes', [])
             elif isinstance(parsed, list):
@@ -244,6 +246,54 @@ def build_recommendation_prompt(exercises, answers):
         f'사용자 조건:\n{json.dumps(answers, ensure_ascii=False)}\n\n'
         f'운동 후보:\n{json.dumps(exercises, ensure_ascii=False)}'
     )
+
+
+def repair_json_quotes(json_str: str) -> str:
+    chars = list(json_str)
+    in_string = False
+    escape_next = False
+    
+    i = 0
+    while i < len(chars):
+        c = chars[i]
+        if escape_next:
+            escape_next = False
+            i += 1
+            continue
+        
+        if c == '\\':
+            escape_next = True
+            i += 1
+            continue
+            
+        if c in ('\n', '\r') and in_string:
+            chars[i] = '\\n'
+            i += 1
+            continue
+
+        if c == '"':
+            if not in_string:
+                in_string = True
+            else:
+                peek_idx = i + 1
+                while peek_idx < len(chars) and chars[peek_idx].isspace():
+                    peek_idx += 1
+                
+                is_valid_json_boundary = False
+                if peek_idx < len(chars):
+                    next_char = chars[peek_idx]
+                    if next_char in (',', '}', ']', ':'):
+                        is_valid_json_boundary = True
+                else:
+                    is_valid_json_boundary = True
+                    
+                if is_valid_json_boundary:
+                    in_string = False
+                else:
+                    chars[i] = '\\"'
+        i += 1
+        
+    return "".join(chars)
 
 
 def extract_json(content):
