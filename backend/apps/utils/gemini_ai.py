@@ -14,7 +14,7 @@ from openai import OpenAI
 
 
 GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/openai/'
-GEMINI_MODEL = 'gemini-2.5-flash-lite'
+GEMINI_MODEL = 'gemini-2.5-flash'
 
 
 def simplify_subtitles(subtitles):
@@ -25,64 +25,96 @@ def simplify_subtitles(subtitles):
             'error': '서버에 GEMINI_API_KEY가 설정되어 있지 않습니다.',
         }
 
+    # Chunk subtitles to avoid Gemini output truncation (max_tokens limit)
+    CHUNK_SIZE = 25
+    all_simplified = []
+
+    if not subtitles:
+        return {
+            'success': True,
+            'data': [],
+        }
+
     try:
         client = OpenAI(base_url=GEMINI_BASE_URL, api_key=api_key)
-        completion = client.chat.completions.create(
-            model=GEMINI_MODEL,
-            response_format={"type": "json_object"},
-            messages=[
-                {
-                    'role': 'system',
-                    'content': (
-                        '너는 한국어 운동 영상 자막을 초보자가 이해하기 쉬운 말로 바꾸는 편집자다. '
-                        '반드시 {"subtitles": [...]} 형태의 JSON 객체로 반환한다.'
-                    ),
-                },
-                {
-                    'role': 'user',
-                    'content': build_simplify_prompt(subtitles),
-                },
-            ],
-            temperature=0.4,
-            top_p=0.7,
-            max_tokens=4096,
-            stream=False,
-        )
     except Exception as exc:
         return {
             'success': False,
-            'error': f'AI 요청에 실패했습니다: {str(exc)}',
+            'error': f'OpenAI 클라이언트 초기화 실패: {str(exc)}',
         }
 
-    content = completion.choices[0].message.content or ''
-    simplified = []
-    try:
-        data = json.loads(content)
-        simplified = data.get('subtitles', [])
-    except (json.JSONDecodeError, KeyError, TypeError):
+    for i in range(0, len(subtitles), CHUNK_SIZE):
+        chunk = subtitles[i:i + CHUNK_SIZE]
         try:
-            parsed = json.loads(extract_json(content))
-            if isinstance(parsed, dict):
-                simplified = parsed.get('subtitles', [])
-            elif isinstance(parsed, list):
-                simplified = parsed
-            else:
-                raise ValueError()
-        except Exception:
+            completion = client.chat.completions.create(
+                model=GEMINI_MODEL,
+                response_format={"type": "json_object"},
+                messages=[
+                    {
+                        'role': 'system',
+                        'content': (
+                            '너는 한국어 운동 영상 자막을 초보자가 이해하기 쉬운 말로 바꾸는 편집자다. '
+                            '반드시 {"subtitles": [...]} 형태의 JSON 객체로 반환한다.'
+                        ),
+                    },
+                    {
+                        'role': 'user',
+                        'content': build_simplify_prompt(chunk),
+                    },
+                ],
+                temperature=0.4,
+                top_p=0.7,
+                max_tokens=4096,
+                stream=False,
+            )
+        except Exception as exc:
             return {
                 'success': False,
-                'error': 'AI 응답을 JSON으로 해석하지 못했습니다.',
+                'error': f'AI 요청 실패 (진행도 {i}/{len(subtitles)}): {str(exc)}',
             }
 
-    if not isinstance(simplified, list):
-        return {
-            'success': False,
-            'error': 'AI 응답의 subtitles는 배열이어야 합니다.',
-        }
+        content = completion.choices[0].message.content or ''
+        chunk_simplified = []
+        try:
+            data = json.loads(content)
+            chunk_simplified = data.get('subtitles', [])
+        except (json.JSONDecodeError, KeyError, TypeError):
+            try:
+                parsed = json.loads(extract_json(content))
+                if isinstance(parsed, dict):
+                    chunk_simplified = parsed.get('subtitles', [])
+                elif isinstance(parsed, list):
+                    chunk_simplified = parsed
+                else:
+                    raise ValueError()
+            except Exception as e:
+                return {
+                    'success': False,
+                    'error': f'AI 응답을 JSON으로 해석하지 못했습니다. (오류: {str(e)}, 응답내용: {content[:150]}...)',
+                }
+
+        if not isinstance(chunk_simplified, list):
+            return {
+                'success': False,
+                'error': f'AI 응답의 subtitles 형식이 올바르지 않습니다. (응답내용: {content[:150]}...)',
+            }
+
+        # Map indices back to original positions
+        for idx, item in enumerate(chunk_simplified):
+            if isinstance(item, dict) and 'index' in item:
+                try:
+                    rel_idx = int(item['index'])
+                    item['index'] = i + rel_idx
+                except (ValueError, TypeError):
+                    item['index'] = i + idx
+            elif isinstance(item, dict):
+                item['index'] = i + idx
+
+        all_simplified.extend(chunk_simplified)
 
     return {
         'success': True,
-        'data': merge_simplified_subtitles(subtitles, simplified),
+        'data': merge_simplified_subtitles(subtitles, all_simplified),
     }
 
 
@@ -149,16 +181,16 @@ def recommend_exercise_notes(exercises, answers):
                 notes = parsed
             else:
                 raise ValueError()
-        except Exception:
+        except Exception as e:
             return {
                 'success': False,
-                'error': 'Gemini 추천 설명 응답을 JSON으로 해석하지 못했습니다.',
+                'error': f'Gemini 추천 설명 응답을 JSON으로 해석하지 못했습니다. (오류: {str(e)}, 응답내용: {content[:150]}...)',
             }
 
     if not isinstance(notes, list):
         return {
             'success': False,
-            'error': 'Gemini 추천 설명 응답의 notes는 배열이어야 합니다.',
+            'error': f'Gemini 추천 설명 응답의 notes는 배열이어야 합니다. (응답내용: {content[:150]}...)',
         }
 
     return {
@@ -187,6 +219,7 @@ def build_simplify_prompt(subtitles):
         '- 반드시 {"subtitles": [...]} 형태의 JSON 객체로 반환하세요.\n'
         '- 각 항목 형식: {"index": number, "translated": "쉬운 한국어 문장", "exercise": "동작명", "duration_sec": number}\n'
         '- "exercise" 필드에는 해당 자막이 설명하고 있는 구체적인 운동 동작의 이름(예: 스쿼트, 런지, 푸시업, 스트레칭 등)을 한국어로 작성하세요. 만약 인트로, 잡담, 아웃트로 등 특정 운동 동작에 해당하지 않는 자막인 경우 "준비/기타"로 분류하세요.\n'
+        '- 절대 본래 영상/자막의 실제 운동 종류와 관련 없는 엉뚱한 운동(예: 상체/하체/스트레칭 영상인데 복근 운동이나 스쿼트로 작성)으로 임의 왜곡하여 지목하지 마십시오. 반드시 원본 자막에서 설명하고 진행 중인 운동 동작에 맞게 지목해야 합니다.\n'
         '- "duration_sec" 필드에는 다음을 계산한 총 시간(초)을 입력하세요:\n'
         '  * 자막 설명 시간: 해당 자막이 화면에 표시되는 시간\n'
         '  * 동작 시행 시간: 자막 내용에 명시된 동작 수행 시간(예: "5초 동안", "30초", "1분 반복")\n'
