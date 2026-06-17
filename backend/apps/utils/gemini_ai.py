@@ -1,4 +1,5 @@
 import json
+import re
 
 from pathlib import Path
 from decouple import Config, RepositoryEnv
@@ -89,10 +90,15 @@ def simplify_subtitles(subtitles):
                 else:
                     raise ValueError()
             except Exception as e:
-                return {
-                    'success': False,
-                    'error': f'AI 응답을 JSON으로 해석하지 못했습니다. (오류: {str(e)}, 응답내용: {content[:150]}...)',
-                }
+                try:
+                    chunk_simplified = regex_parse_subtitles(content)
+                    if not chunk_simplified:
+                        raise e
+                except Exception:
+                    return {
+                        'success': False,
+                        'error': f'AI 응답을 JSON으로 해석하지 못했습니다. (오류: {str(e)}, 응답내용: {content[:150]}...)',
+                    }
 
         if not isinstance(chunk_simplified, list):
             return {
@@ -184,10 +190,15 @@ def recommend_exercise_notes(exercises, answers):
             else:
                 raise ValueError()
         except Exception as e:
-            return {
-                'success': False,
-                'error': f'Gemini 추천 설명 응답을 JSON으로 해석하지 못했습니다. (오류: {str(e)}, 응답내용: {content[:150]}...)',
-            }
+            try:
+                notes = regex_parse_exercise_notes(content)
+                if not notes:
+                    raise e
+            except Exception:
+                return {
+                    'success': False,
+                    'error': f'Gemini 추천 설명 응답을 JSON으로 해석하지 못했습니다. (오류: {str(e)}, 응답내용: {content[:150]}...)',
+                }
 
     if not isinstance(notes, list):
         return {
@@ -246,6 +257,137 @@ def build_recommendation_prompt(exercises, answers):
         f'사용자 조건:\n{json.dumps(answers, ensure_ascii=False)}\n\n'
         f'운동 후보:\n{json.dumps(exercises, ensure_ascii=False)}'
     )
+
+
+def regex_parse_subtitles(content: str):
+    matches = re.finditer(r'\{([^}]+)\}', content)
+    subtitles = []
+    for m in matches:
+        block_content = m.group(1)
+        if 'index' not in block_content or 'translated' not in block_content:
+            continue
+            
+        # Extract index
+        idx_match = re.search(r'"index"\s*:\s*(\d+)', block_content)
+        idx = int(idx_match.group(1)) if idx_match else None
+        
+        # Extract translated
+        translated = ""
+        trans_match_explicit = re.search(r'"translated"\s*:\s*"(.*?)"\s*,\s*"exercise"', block_content, re.DOTALL)
+        if trans_match_explicit:
+            translated = trans_match_explicit.group(1)
+        else:
+            parts = block_content.split('"exercise"')
+            if len(parts) > 0:
+                trans_part = parts[0]
+                q_start = trans_part.find('"translated"')
+                if q_start != -1:
+                    val_part = trans_part[q_start + len('"translated"'):]
+                    first_quote = val_part.find('"')
+                    if first_quote != -1:
+                        val_str = val_part[first_quote + 1:]
+                        val_str = val_str.strip()
+                        if val_str.endswith(','):
+                            val_str = val_str[:-1].strip()
+                        if val_str.endswith('"'):
+                            val_str = val_str[:-1]
+                        translated = val_str
+
+        # Extract exercise
+        exercise = "준비/기타"
+        ex_match = re.search(r'"exercise"\s*:\s*"(.*?)"\s*,\s*"duration_sec"', block_content, re.DOTALL)
+        if ex_match:
+            exercise = ex_match.group(1)
+        else:
+            parts = block_content.split('"duration_sec"')
+            if len(parts) > 0:
+                ex_part = parts[0]
+                q_start = ex_part.find('"exercise"')
+                if q_start != -1:
+                    val_part = ex_part[q_start + len('"exercise"'):]
+                    first_quote = val_part.find('"')
+                    if first_quote != -1:
+                        val_str = val_part[first_quote + 1:]
+                        val_str = val_str.strip()
+                        if val_str.endswith(','):
+                            val_str = val_str[:-1].strip()
+                        if val_str.endswith('"'):
+                            val_str = val_str[:-1]
+                        exercise = val_str
+
+        # Extract duration_sec
+        dur_match = re.search(r'"duration_sec"\s*:\s*(\d+)', block_content)
+        duration_sec = int(dur_match.group(1)) if dur_match else 0
+        
+        if idx is not None:
+            subtitles.append({
+                'index': idx,
+                'translated': translated,
+                'exercise': exercise,
+                'duration_sec': duration_sec
+            })
+    return subtitles
+
+
+def regex_parse_exercise_notes(content: str):
+    matches = re.finditer(r'\{([^}]+)\}', content)
+    notes = []
+    for m in matches:
+        block_content = m.group(1)
+        if 'id' not in block_content or 'description' not in block_content:
+            continue
+            
+        # Extract id
+        id_match = re.search(r'"id"\s*:\s*"(.*?)"', block_content)
+        ex_id = id_match.group(1) if id_match else ""
+        
+        # Extract ko_name
+        ko_name = ""
+        ko_name_match = re.search(r'"ko_name"\s*:\s*"(.*?)"\s*,\s*"description"', block_content, re.DOTALL)
+        if ko_name_match:
+            ko_name = ko_name_match.group(1)
+        else:
+            parts = block_content.split('"description"')
+            if len(parts) > 0:
+                ko_part = parts[0]
+                q_start = ko_part.find('"ko_name"')
+                if q_start != -1:
+                    val_part = ko_part[q_start + len('"ko_name"'):]
+                    first_quote = val_part.find('"')
+                    if first_quote != -1:
+                        val_str = val_part[first_quote + 1:]
+                        val_str = val_str.strip()
+                        if val_str.endswith(','):
+                            val_str = val_str[:-1].strip()
+                        if val_str.endswith('"'):
+                            val_str = val_str[:-1]
+                        ko_name = val_str
+
+        # Extract description
+        description = ""
+        desc_match = re.search(r'"description"\s*:\s*"(.*?)"', block_content, re.DOTALL)
+        if desc_match:
+            description = desc_match.group(1)
+        else:
+            q_start = block_content.find('"description"')
+            if q_start != -1:
+                val_part = block_content[q_start + len('"description"'):]
+                first_quote = val_part.find('"')
+                if first_quote != -1:
+                    val_str = val_part[first_quote + 1:]
+                    last_quote = val_str.rfind('"')
+                    if last_quote != -1:
+                        description = val_str[:last_quote]
+                    else:
+                        description = val_str.strip()
+
+        if ex_id:
+            notes.append({
+                'id': ex_id,
+                'ko_name': ko_name,
+                'description': description
+            })
+    return notes
 
 
 def repair_json_quotes(json_str: str) -> str:
