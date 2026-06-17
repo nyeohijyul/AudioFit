@@ -1,5 +1,6 @@
 import json
 import re
+from concurrent.futures import ThreadPoolExecutor
 
 from pathlib import Path
 from decouple import Config, RepositoryEnv
@@ -44,8 +45,8 @@ def simplify_subtitles(subtitles):
             'error': f'OpenAI 클라이언트 초기화 실패: {str(exc)}',
         }
 
-    for i in range(0, len(subtitles), CHUNK_SIZE):
-        chunk = subtitles[i:i + CHUNK_SIZE]
+    def process_chunk(start_idx):
+        chunk = subtitles[start_idx:start_idx + CHUNK_SIZE]
         try:
             completion = client.chat.completions.create(
                 model=GEMINI_MODEL,
@@ -68,56 +69,65 @@ def simplify_subtitles(subtitles):
                 max_tokens=4096,
                 stream=False,
             )
+            content = completion.choices[0].message.content or ''
+            chunk_simplified = []
+            try:
+                data = json.loads(content)
+                chunk_simplified = data.get('subtitles', [])
+            except (json.JSONDecodeError, KeyError, TypeError):
+                try:
+                    repaired = repair_json_quotes(extract_json(content))
+                    parsed = json.loads(repaired)
+                    if isinstance(parsed, dict):
+                        chunk_simplified = parsed.get('subtitles', [])
+                    elif isinstance(parsed, list):
+                        chunk_simplified = parsed
+                    else:
+                        raise ValueError()
+                except Exception as e:
+                    try:
+                        chunk_simplified = regex_parse_subtitles(content)
+                        if not chunk_simplified:
+                            raise e
+                    except Exception:
+                        return {
+                            'success': False,
+                            'error': f'AI 응답을 JSON으로 해석하지 못했습니다. (오류: {str(e)}, 응답내용: {content[:150]}...)',
+                        }
+
+            if not isinstance(chunk_simplified, list):
+                return {
+                    'success': False,
+                    'error': f'AI 응답의 subtitles 형식이 올바르지 않습니다. (응답내용: {content[:150]}...)',
+                }
+
+            # Map indices back to original positions
+            for idx, item in enumerate(chunk_simplified):
+                if isinstance(item, dict) and 'index' in item:
+                    try:
+                        rel_idx = int(item['index'])
+                        item['index'] = start_idx + rel_idx
+                    except (ValueError, TypeError):
+                        item['index'] = start_idx + idx
+                elif isinstance(item, dict):
+                    item['index'] = start_idx + idx
+
+            return {'success': True, 'data': chunk_simplified}
+
         except Exception as exc:
             return {
                 'success': False,
-                'error': f'AI 요청 실패 (진행도 {i}/{len(subtitles)}): {str(exc)}',
+                'error': f'AI 요청 실패 (진행도 {start_idx}/{len(subtitles)}): {str(exc)}',
             }
 
-        content = completion.choices[0].message.content or ''
-        chunk_simplified = []
-        try:
-            data = json.loads(content)
-            chunk_simplified = data.get('subtitles', [])
-        except (json.JSONDecodeError, KeyError, TypeError):
-            try:
-                repaired = repair_json_quotes(extract_json(content))
-                parsed = json.loads(repaired)
-                if isinstance(parsed, dict):
-                    chunk_simplified = parsed.get('subtitles', [])
-                elif isinstance(parsed, list):
-                    chunk_simplified = parsed
-                else:
-                    raise ValueError()
-            except Exception as e:
-                try:
-                    chunk_simplified = regex_parse_subtitles(content)
-                    if not chunk_simplified:
-                        raise e
-                except Exception:
-                    return {
-                        'success': False,
-                        'error': f'AI 응답을 JSON으로 해석하지 못했습니다. (오류: {str(e)}, 응답내용: {content[:150]}...)',
-                    }
+    start_indices = list(range(0, len(subtitles), CHUNK_SIZE))
+    with ThreadPoolExecutor(max_workers=min(8, len(start_indices) or 1)) as executor:
+        results = list(executor.map(process_chunk, start_indices))
 
-        if not isinstance(chunk_simplified, list):
-            return {
-                'success': False,
-                'error': f'AI 응답의 subtitles 형식이 올바르지 않습니다. (응답내용: {content[:150]}...)',
-            }
-
-        # Map indices back to original positions
-        for idx, item in enumerate(chunk_simplified):
-            if isinstance(item, dict) and 'index' in item:
-                try:
-                    rel_idx = int(item['index'])
-                    item['index'] = i + rel_idx
-                except (ValueError, TypeError):
-                    item['index'] = i + idx
-            elif isinstance(item, dict):
-                item['index'] = i + idx
-
-        all_simplified.extend(chunk_simplified)
+    for res in results:
+        if not res['success']:
+            return res
+        all_simplified.extend(res['data'])
 
     return {
         'success': True,
