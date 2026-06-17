@@ -29,12 +29,13 @@ def simplify_subtitles(subtitles):
         client = OpenAI(base_url=GEMINI_BASE_URL, api_key=api_key)
         completion = client.chat.completions.create(
             model=GEMINI_MODEL,
+            response_format={"type": "json_object"},
             messages=[
                 {
                     'role': 'system',
                     'content': (
                         '너는 한국어 운동 영상 자막을 초보자가 이해하기 쉬운 말로 바꾸는 편집자다. '
-                        '입력 순서와 개수를 유지하고, 반드시 JSON만 반환한다.'
+                        '반드시 {"subtitles": [...]} 형태의 JSON 객체로 반환한다.'
                     ),
                 },
                 {
@@ -54,18 +55,29 @@ def simplify_subtitles(subtitles):
         }
 
     content = completion.choices[0].message.content or ''
+    simplified = []
     try:
-        simplified = json.loads(extract_json(content))
-    except json.JSONDecodeError:
-        return {
-            'success': False,
-            'error': 'AI 응답을 JSON으로 해석하지 못했습니다.',
-        }
+        data = json.loads(content)
+        simplified = data.get('subtitles', [])
+    except (json.JSONDecodeError, KeyError, TypeError):
+        try:
+            parsed = json.loads(extract_json(content))
+            if isinstance(parsed, dict):
+                simplified = parsed.get('subtitles', [])
+            elif isinstance(parsed, list):
+                simplified = parsed
+            else:
+                raise ValueError()
+        except Exception:
+            return {
+                'success': False,
+                'error': 'AI 응답을 JSON으로 해석하지 못했습니다.',
+            }
 
     if not isinstance(simplified, list):
         return {
             'success': False,
-            'error': 'AI 응답은 JSON 배열이어야 합니다.',
+            'error': 'AI 응답의 subtitles는 배열이어야 합니다.',
         }
 
     return {
@@ -98,12 +110,13 @@ def recommend_exercise_notes(exercises, answers):
         client = OpenAI(base_url=GEMINI_BASE_URL, api_key=api_key)
         completion = client.chat.completions.create(
             model=GEMINI_MODEL,
+            response_format={"type": "json_object"},
             messages=[
                 {
                     'role': 'system',
                     'content': (
                         '너는 한국어 홈트레이닝 코치다. ExerciseDB 운동 데이터를 앱 화면에 표시할 '
-                        '짧고 쉬운 한국어 이름과 설명으로 다듬는다. 반드시 JSON 배열만 반환한다.'
+                        '짧고 쉬운 한국어 이름과 설명으로 다듬는다. 반드시 {"notes": [...]} 형태의 JSON 객체로 반환한다.'
                     ),
                 },
                 {
@@ -123,18 +136,29 @@ def recommend_exercise_notes(exercises, answers):
         }
 
     content = completion.choices[0].message.content or ''
+    notes = []
     try:
-        notes = json.loads(extract_json(content))
-    except json.JSONDecodeError:
-        return {
-            'success': False,
-            'error': 'Gemini 추천 설명 응답을 JSON으로 해석하지 못했습니다.',
-        }
+        data = json.loads(content)
+        notes = data.get('notes', [])
+    except (json.JSONDecodeError, KeyError, TypeError):
+        try:
+            parsed = json.loads(extract_json(content))
+            if isinstance(parsed, dict):
+                notes = parsed.get('notes', [])
+            elif isinstance(parsed, list):
+                notes = parsed
+            else:
+                raise ValueError()
+        except Exception:
+            return {
+                'success': False,
+                'error': 'Gemini 추천 설명 응답을 JSON으로 해석하지 못했습니다.',
+            }
 
     if not isinstance(notes, list):
         return {
             'success': False,
-            'error': 'Gemini 추천 설명 응답은 JSON 배열이어야 합니다.',
+            'error': 'Gemini 추천 설명 응답의 notes는 배열이어야 합니다.',
         }
 
     return {
@@ -160,7 +184,7 @@ def build_simplify_prompt(subtitles):
         '- 입력과 같은 개수, 같은 index 순서로 반환\n'
         '- 의미는 유지하되 전문 용어는 쉽게 풀어 쓰기\n'
         '- 광고, 구독 유도, 잡담처럼 운동 루틴과 무관한 문장은 짧게 정리\n'
-        '- JSON 배열만 반환\n'
+        '- 반드시 {"subtitles": [...]} 형태의 JSON 객체로 반환하세요.\n'
         '- 각 항목 형식: {"index": number, "translated": "쉬운 한국어 문장", "exercise": "동작명", "duration_sec": number}\n'
         '- "exercise" 필드에는 해당 자막이 설명하고 있는 구체적인 운동 동작의 이름(예: 스쿼트, 런지, 푸시업, 스트레칭 등)을 한국어로 작성하세요. 만약 인트로, 잡담, 아웃트로 등 특정 운동 동작에 해당하지 않는 자막인 경우 "준비/기타"로 분류하세요.\n'
         '- "duration_sec" 필드에는 다음을 계산한 총 시간(초)을 입력하세요:\n'
@@ -177,7 +201,7 @@ def build_recommendation_prompt(exercises, answers):
     return (
         '아래 ExerciseDB 운동 후보를 홈트 사용자에게 보여줄 문구로 다듬어 주세요.\n'
         '조건:\n'
-        '- JSON 배열만 반환\n'
+        '- 반드시 {"notes": [...]} 형태의 JSON 객체로 반환하세요.\n'
         '- 입력된 id를 그대로 유지\n'
         '- 각 항목 형식: {"id": "string", "ko_name": "한국어 운동명", "description": "40자 안팎의 쉬운 운동 설명"}\n'
         '- 홈트레이닝/맨몸 운동 맥락으로 작성\n'
@@ -197,28 +221,30 @@ def extract_json(content):
             part = part.strip()
             if part.startswith('json'):
                 part = part[4:].strip()
-            if (part.startswith('[') and part.endswith(']')) or (part.startswith('{') and part.endswith('}')):
-                return part
-            # Look for bracket boundaries inside
-            s = part.find('[')
-            e = part.rfind(']')
-            if s != -1 and e != -1:
-                return part[s:e + 1]
-            s = part.find('{')
-            e = part.rfind('}')
-            if s != -1 and e != -1:
-                return part[s:e + 1]
-                
+            
+            # Check brackets start first
+            s_brace = part.find('{')
+            s_bracket = part.find('[')
+            if s_brace != -1 and (s_bracket == -1 or s_brace < s_bracket):
+                e_brace = part.rfind('}')
+                if e_brace != -1:
+                    return part[s_brace:e_brace + 1]
+            elif s_bracket != -1:
+                e_bracket = part.rfind(']')
+                if e_bracket != -1:
+                    return part[s_bracket:e_bracket + 1]
+
     # Fallback to finding brackets in the raw string
-    start = stripped.find('[')
-    end = stripped.rfind(']')
-    if start != -1 and end != -1:
-        return stripped[start:end + 1]
-        
-    start = stripped.find('{')
-    end = stripped.rfind('}')
-    if start != -1 and end != -1:
-        return stripped[start:end + 1]
+    s_brace = stripped.find('{')
+    s_bracket = stripped.find('[')
+    if s_brace != -1 and (s_bracket == -1 or s_brace < s_bracket):
+        e_brace = stripped.rfind('}')
+        if e_brace != -1:
+            return stripped[s_brace:e_brace + 1]
+    elif s_bracket != -1:
+        e_bracket = stripped.rfind(']')
+        if e_bracket != -1:
+            return stripped[s_bracket:e_bracket + 1]
         
     return stripped
 
